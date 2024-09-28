@@ -1,6 +1,6 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "심사",
+  "name": "보디빌딩대회 심사시스템",
   "icons": [
     {
       "src": "favicon.ico",
