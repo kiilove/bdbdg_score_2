@@ -59,11 +59,12 @@ const AutoScoreTable = () => {
   );
   const fetchScoreCardQuery = useFirestoreQuery();
   const {
-    data: compareData,
-    loading,
-    error,
-    getDocument,
-  } = useFirebaseRealtimeGetDocument();
+    data: realtimeData,
+    loading: realtimeLoading,
+    error: realtimeError,
+  } = useFirebaseRealtimeGetDocument(
+    contestInfo?.id ? `currentStage/${contestInfo.id}/compares` : null
+  );
 
   const updateRealTimeJudgeMessage = useFirebaseRealtimeUpdateData();
 
@@ -364,7 +365,7 @@ const AutoScoreTable = () => {
               currentStageInfo,
               currentJudgeInfo,
               contestInfo,
-              compareInfo: { ...compareData },
+              compareInfo: { ...realtimeData },
             },
           })
         );
@@ -375,7 +376,7 @@ const AutoScoreTable = () => {
 
   useEffect(() => {
     //console.log(currentStageInfo);
-    if (currentStageInfo && !compareData?.status.compareStart) {
+    if (currentStageInfo && !realtimeData?.status.compareStart) {
       const hasUndefinedScoreOwner = currentStageInfo.some((stage) => {
         return (
           stage.originalRange &&
@@ -385,7 +386,7 @@ const AutoScoreTable = () => {
 
       setValidateScoreCard(hasUndefinedScoreOwner);
     }
-    if (currentStageInfo && compareData?.scoreMode === "all") {
+    if (currentStageInfo && realtimeData?.scoreMode === "all") {
       const hasUndefinedScoreOwner = currentStageInfo.some((stage) => {
         return (
           stage.originalRange &&
@@ -396,7 +397,7 @@ const AutoScoreTable = () => {
       setValidateScoreCard(hasUndefinedScoreOwner);
     }
 
-    if (currentStageInfo && compareData?.scoreMode === "topOnly") {
+    if (currentStageInfo && realtimeData?.scoreMode === "topOnly") {
       const hasUndefinedScoreOwner = currentStageInfo.some((stage) => {
         return (
           stage.matchedTopRange &&
@@ -407,7 +408,7 @@ const AutoScoreTable = () => {
       setValidateScoreCard(hasUndefinedScoreOwner);
     }
 
-    if (currentStageInfo && compareData?.scoreMode === "topWithSub") {
+    if (currentStageInfo && realtimeData?.scoreMode === "topWithSub") {
       const hasUndefinedScoreOwner = currentStageInfo.some((stage) => {
         return (
           (stage.matchedTopRange &&
@@ -436,37 +437,26 @@ const AutoScoreTable = () => {
   }, [location, validateScoreCard]);
 
   useEffect(() => {
-    //console.log(compareData);
-    if (compareData?.players?.length > 0) {
-      setTopPlayersArray(() => [...compareData.players]);
+    //console.log(realtimeData);
+    if (realtimeData?.players?.length > 0) {
+      setTopPlayersArray(() => [...realtimeData.players]);
     }
-  }, [compareData?.status]);
+  }, [realtimeData?.status]);
 
   useEffect(() => {
-    if (compareData?.status?.compareStart) {
+    console.log(realtimeData);
+    if (realtimeData?.status?.compareStart) {
       handleComparePopup();
     }
-  }, [compareData?.status?.compareStart]);
-
-  useEffect(() => {
-    if (currentContest?.contests?.id) {
-      // Debounce the getDocument call to once every second
-      const debouncedGetDocument = debounce(
-        () =>
-          getDocument(
-            `currentStage/${currentContest.contests.id}/compares`,
-            currentContest.contests.id
-          ),
-        1000
-      );
-      debouncedGetDocument();
-    }
-    return () => {};
-  }, [getDocument]);
+  }, [realtimeData?.status?.compareStart]);
 
   useEffect(() => {
     console.log(location);
   }, [location]);
+
+  useEffect(() => {
+    console.log(realtimeData);
+  }, [realtimeData]);
 
   return (
     <>
@@ -528,7 +518,7 @@ const AutoScoreTable = () => {
                   채점모드
                 </div>
                 <div className="flex w-32 h-auto py-2 justify-center items-center text-xl font-semibold">
-                  {compareData?.status?.compareIng ? "비교심사" : "일반심사"}
+                  {realtimeData?.status?.compareIng ? "비교심사" : "일반심사"}
                 </div>
                 <div className="flex w-32 h-auto py-2 justify-center items-center ">
                   {currentStageInfo[0].isHead && (
@@ -677,7 +667,7 @@ const AutoScoreTable = () => {
                       </div>
                       <div className="flex h-full rounded-md gap-y-2 flex-col w-full px-4">
                         {stage.matchedSubPlayers?.length > 0 &&
-                          compareData?.scoreMode === "topWithSub" &&
+                          realtimeData?.scoreMode === "topWithSub" &&
                           stage.matchedSubPlayers.map((matched, mIdx) => {
                             const { playerNumber, playerScore, playerUid } =
                               matched;
@@ -766,8 +756,8 @@ const AutoScoreTable = () => {
                       </div>
                       <div className="flex h-full rounded-md gap-y-2 flex-col w-full px-4">
                         {stage.matchedNormalPlayers?.length > 0 &&
-                          (compareData?.scoreMode === "all" ||
-                            !compareData?.status?.compareStart) &&
+                          (realtimeData?.scoreMode === "all" ||
+                            !realtimeData?.status?.compareStart) &&
                           stage.matchedNormalPlayers.map((matched, mIdx) => {
                             const { playerNumber, playerScore, playerUid } =
                               matched;

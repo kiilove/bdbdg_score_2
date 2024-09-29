@@ -20,7 +20,6 @@ const ScoreLogin = () => {
   const [message, setMessage] = useState({});
   const [machineId, setMachineId] = useState(null);
   const [contestInfo, setContestInfo] = useState({});
-  const [missingData, setMissingData] = useState([]); // 빠진 데이터를 저장하는 상태 추가
   const [cardType, setCardType] = useState("");
 
   const [password, setPassword] = useState("");
@@ -36,17 +35,6 @@ const ScoreLogin = () => {
   const updateRealtimeData = useFirebaseRealtimeUpdateData();
 
   const pwdRefs = [useRef(), useRef(), useRef(), useRef(), useRef()];
-
-  // 빠진 데이터를 체크하는 함수 추가
-  const checkMissingData = () => {
-    const missing = [];
-    if (!location?.state?.currentStageInfo) missing.push("무대 정보");
-    if (!location?.state?.currentJudgeInfo) missing.push("심판 정보");
-    if (!contestInfo.id) missing.push("대회 정보");
-    if (!realtimeData?.categoryTitle) missing.push("실시간 데이터");
-
-    setMissingData(missing);
-  };
 
   const handleInputs = (index, value) => {
     if (value.length > 1) {
@@ -83,6 +71,7 @@ const ScoreLogin = () => {
       }
     }
 
+    console.log(pwdRefs.length, index);
     // 엔터키를 누르면 심사진행 버튼 클릭과 동일한 동작을 처리
     if (e.key === "Enter" && index === pwdRefs.length - 2) {
       handleJudgeLogin(
@@ -107,6 +96,7 @@ const ScoreLogin = () => {
   };
 
   const handleEnterKey = (e) => {
+    console.log(e);
     if (
       e.key === "Enter" &&
       passwordInputs.join("") ===
@@ -121,6 +111,7 @@ const ScoreLogin = () => {
   };
 
   //로그인시에 location.state에 currentStageInfo를 담아서 넘겨야한다.
+  // 23.08.14
   const handleJudgeLogin = async (collectionName, documentId, seatIndex) => {
     await handleUpdateState(
       `${collectionName}/${documentId}/judges/${seatIndex - 1}`,
@@ -165,15 +156,16 @@ const ScoreLogin = () => {
   }, []);
 
   useEffect(() => {
-    checkMissingData(); // 빠진 데이터 체크
     realtimeData?.categoryTitle && setIsLoading(false);
-  }, [realtimeData, contestInfo]);
+  }, [realtimeData]);
 
   useEffect(() => {
     if (
       realtimeData &&
       realtimeData?.stageId !== location?.state?.currentStageInfo[0].stageId
     ) {
+      console.log("real", realtimeData?.stageId);
+      console.log("location", location?.state?.currentStageInfo[0].stageId);
       navigate("/lobby", { replace: true });
     }
   }, [realtimeData?.stageId]);
@@ -193,24 +185,6 @@ const ScoreLogin = () => {
             onCancel={() => setMsgOpen(false)}
             onConfirm={() => setMsgOpen(false)}
           />
-
-          {/* 빠진 데이터가 있으면 경고 메시지 표시 */}
-          {missingData.length > 0 && (
-            <div className="text-red-600 text-center font-bold mb-5">
-              {`누락된 데이터: ${missingData.join(", ")}`}
-            </div>
-          )}
-
-          {/* 되돌아가기 버튼 추가 */}
-          <div className="flex justify-center mb-5">
-            <button
-              className="w-44 h-12 border text-gray-800 text-base font-semibold rounded-lg"
-              onClick={() => navigate("/lobby")}
-            >
-              되돌아가기
-            </button>
-          </div>
-
           <div className="flex w-full justify-center items-center h-20">
             <span className="text-6xl font-sans font-bold text-gray-800">
               JUDGE
@@ -219,12 +193,10 @@ const ScoreLogin = () => {
               {machineId}
             </span>
           </div>
-
           <div className="flex text-2xl font-bold text-blue-900 h-auto w-full justify-center items-center p-5">
             {realtimeData?.categoryTitle} ({realtimeData?.gradeTitle})
             {location?.state?.currentStageInfo[0].onedayPassword}
           </div>
-
           <div className="flex w-full justify-center items-center p-5 gap-x-5">
             <div className="flex w-full justify-center items-center p-5 gap-x-5">
               {passwordInputs.map((value, index) => (
@@ -247,32 +219,32 @@ const ScoreLogin = () => {
                   />
                 </div>
               ))}
-              <div className="flex w-auto h-auto p-3 justify-start items-center">
-                {passwordInputs.join("") ===
-                location?.state?.currentStageInfo[0].onedayPassword ? (
-                  <button
-                    className="w-32 h-32 bg-blue-500 text-white text-2xl font-semibold rounded-lg"
-                    ref={pwdRefs[4]}
-                    onClick={() =>
-                      handleJudgeLogin(
-                        "currentStage",
-                        contestInfo.id,
-                        location.state.currentJudgeInfo.seatIndex
-                      )
-                    }
-                  >
-                    심사진행
-                  </button>
-                ) : (
-                  <button
-                    className="w-44 h-24 bg-blue-500 text-white text-2xl font-semibold rounded-lg hidden"
-                    ref={pwdRefs[4]}
-                  >
-                    심사진행
-                  </button>
-                )}
-              </div>
             </div>
+          </div>
+          <div className="flex w-full h-auto p-3 justify-center items-center">
+            {passwordInputs.join("") ===
+            location?.state?.currentStageInfo[0].onedayPassword ? (
+              <button
+                className="w-44 h-24 bg-blue-500 text-white text-2xl font-semibold rounded-lg"
+                ref={pwdRefs[4]}
+                onClick={() =>
+                  handleJudgeLogin(
+                    "currentStage",
+                    contestInfo.id,
+                    location.state.currentJudgeInfo.seatIndex
+                  )
+                }
+              >
+                심사진행
+              </button>
+            ) : (
+              <button
+                className="w-44 h-24 bg-blue-500 text-white text-2xl font-semibold rounded-lg hidden"
+                ref={pwdRefs[4]}
+              >
+                심사진행
+              </button>
+            )}
           </div>
         </div>
       )}

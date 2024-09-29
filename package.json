@@ -1,6 +1,6 @@
 {
-  "name": "bdbdg-judge",
-  "version": "0.0.1",
+  "name": "score-bdbdg-2",
+  "version": "1.0.1",
   "private": true,
   "dependencies": {
     "@emotion/react": "^11.10.6",
