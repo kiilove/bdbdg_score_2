@@ -14,6 +14,7 @@ export const CurrentContestProvider = ({ children }) => {
 
   useEffect(() => {
     if (currentContest) {
+      console.log(currentContest);
       localStorage.setItem("currentContest", JSON.stringify(currentContest));
     } else {
       localStorage.removeItem("currentContest");

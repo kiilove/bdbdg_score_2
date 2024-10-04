@@ -528,7 +528,11 @@ const AutoPointTable = () => {
                 </div>
               </div>
               <div className="flex w-1/3 justify-center">
-                <img src={YbbfLogo} alt="" className="w-36" />
+                <img
+                  src={currentContest?.contests.contestOrgLogo}
+                  alt=""
+                  className="w-36"
+                />
               </div>
               <div className="flex w-1/3 items-end flex-col">
                 <div className="flex w-32 h-auto py-2 justify-center items-center text-lg">

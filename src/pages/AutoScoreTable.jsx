@@ -274,6 +274,8 @@ const AutoScoreTable = () => {
   };
 
   const handleValidateScore = async (collectionName, prevState) => {
+    console.log("Starting validation for score cards:", prevState); // 검증 시작 로그
+
     if (prevState?.length <= 0) {
       setMessage({
         delete: "end",
@@ -281,11 +283,16 @@ const AutoScoreTable = () => {
         validate: "fail",
         validateMsg: "데이터 공유에 문제가 발생했습니다.",
       });
+      console.error("No previous state to validate."); // 데이터 없을 때 에러 로그
       return;
     }
 
     prevState.map(async (state, sIdx) => {
       const { gradeId, judgeUid, playerUid, playerScore } = state;
+      console.log(
+        `Validating: gradeId=${gradeId}, judgeUid=${judgeUid}, playerUid=${playerUid}`
+      ); // 검증할 데이터 로그
+
       const condition = [
         where("gradeId", "==", gradeId),
         where("judgeUid", "==", judgeUid),
@@ -297,6 +304,8 @@ const AutoScoreTable = () => {
         condition
       );
 
+      console.log("Fetched documents for validation:", getAddedData); // 가져온 문서들 확인
+
       if (getAddedData?.length > 1) {
         setMessage({
           delete: "end",
@@ -304,6 +313,7 @@ const AutoScoreTable = () => {
           validate: "fail",
           validateMsg: "다중 저장된 데이터가 있습니다.",
         });
+        console.error("Duplicate data found during validation."); // 다중 데이터 있을 때 에러 로그
       }
 
       switch (getAddedData?.length) {
@@ -314,6 +324,7 @@ const AutoScoreTable = () => {
             validate: "fail",
             validateMsg: "데이터 저장에 문제가 있습니다.",
           });
+          console.error("No data found for validation."); // 데이터 없을 때 에러 로그
           break;
 
         case 1:
@@ -324,6 +335,7 @@ const AutoScoreTable = () => {
               validate: "end",
               validateMsg: "검증완료",
             });
+            console.log("Validation successful for:", state); // 성공적으로 검증된 데이터 로그
           } else {
             setMessage({
               delete: "end",
@@ -331,6 +343,12 @@ const AutoScoreTable = () => {
               validate: "fail",
               validateMsg: "저장된 데이터 오류",
             });
+            console.error(
+              "Validation failed. Expected score:",
+              playerScore,
+              "but found:",
+              getAddedData[0].playerScore
+            ); // 잘못된 점수일 때 에러 로그
           }
           break;
 
@@ -532,7 +550,11 @@ const AutoScoreTable = () => {
                 </div>
               </div>
               <div className="flex w-1/3 justify-center">
-                <img src={YbbfLogo} alt="" className="w-36" />
+                <img
+                  src={currentContest?.contestInfo?.contestOrgLogo}
+                  alt=""
+                  className="w-36"
+                />
               </div>
               <div className="flex w-1/3 items-end flex-col">
                 <div className="flex w-32 h-auto py-2 justify-center items-center text-lg">
