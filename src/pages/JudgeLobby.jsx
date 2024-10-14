@@ -201,7 +201,8 @@ const JudgeLobby = () => {
     prevComparePlayers = [],
     realtimeComparemode = {}
   ) => {
-    const { stageId, stageNumber, categoryJudgeType } = stageInfo;
+    const { stageId, stageNumber, categoryJudgeType, categorySection } =
+      stageInfo;
     const {
       judgeUid,
       judgeName,
@@ -470,6 +471,7 @@ const JudgeLobby = () => {
     }`;
 
     console.log("collectionInfo:", collectionInfo); // 콘솔 로그 추가
+    console.log(currentJudgeInfo.seatIndex - 1);
     let prevTop = [];
 
     try {

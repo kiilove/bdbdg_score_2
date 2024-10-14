@@ -166,6 +166,8 @@ const ScoreLogin = () => {
 
   useEffect(() => {
     checkMissingData(); // 빠진 데이터 체크
+    console.log(checkMissingData());
+    console.log(location);
     realtimeData?.categoryTitle && setIsLoading(false);
   }, [realtimeData, contestInfo]);
 

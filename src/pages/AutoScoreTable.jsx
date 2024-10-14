@@ -113,11 +113,12 @@ const AutoScoreTable = () => {
 
   // 심사표 전송을 하기전에 이중 등록을 방지하기 위해 gradeId,judgeUid값을 받아서
   // 문서id를 수집한후에 map으로 돌리면서 삭제해줌
-  const deletePreScoreCard = async (collectionName, gradeId, judgeUid) => {
+  const deletePreScoreCard = async (collectionName, gradeId, seatIndex) => {
     const condition = [
       where("gradeId", "==", gradeId),
-      where("judgeUid", "==", judgeUid),
+      where("seatIndex", "==", seatIndex),
     ];
+    console.log(seatIndex);
 
     const getDocuId = await fetchScoreCardQuery.getDocuments(
       collectionName,
@@ -194,7 +195,7 @@ const AutoScoreTable = () => {
         await deletePreScoreCard(
           contestInfo.collectionName,
           data.gradeId,
-          data.judgeUid
+          data.seatIndex
         );
 
         const {
@@ -202,6 +203,7 @@ const AutoScoreTable = () => {
           categoryId,
           categoryTitle,
           categoryJudgeType,
+          categorySection,
           gradeId,
           gradeTitle,
           judgeUid,
