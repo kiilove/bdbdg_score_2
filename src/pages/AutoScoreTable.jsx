@@ -873,19 +873,38 @@ const AutoScoreTable = () => {
                 ))}
 
               <div className="flex w-full justify-start items-center flex-col gap-y-2">
-                <div className="flex h-full rounded-md gap-y-2 flex-col w-full"></div>
                 <div className="flex w-full h-auto py-2">
                   <div className="flex w-1/2 h-24 p-2">
-                    <div className="flex rounded-lg">
+                    <div className="flex w-full rounded-lg">
                       <div className="flex w-1/6 justify-center items-center text-lg">
                         서명
                       </div>
                       <div className="flex w-5/6 justify-center items-center h-20 ">
-                        {currentJudgeInfo && (
-                          <CanvasWithImageData
-                            imageData={currentStageInfo[0].judgeSignature}
-                          />
-                        )}
+                        {currentJudgeInfo &&
+                          (currentStageInfo[0].judgeSignature ? (
+                            // <CanvasWithImageData
+                            //   imageData={currentStageInfo[0].judgeSignature}
+                            // />
+                            <div
+                              className="flex w-full justify-center items-center"
+                              style={{ height: "150px" }}
+                            >
+                              <img
+                                src={currentStageInfo[0].judgeSignature}
+                                alt="서명"
+                                style={{ width: "150px", height: "100px" }}
+                              />
+                            </div>
+                          ) : (
+                            <div className="flex flex-col">
+                              <span style={{ fontSize: 12 }}>
+                                사인을 불러오지 못했지만
+                              </span>
+                              <span style={{ fontSize: 12 }}>
+                                심사에는 지장이 없습니다.
+                              </span>
+                            </div>
+                          ))}
                       </div>
                     </div>
                   </div>

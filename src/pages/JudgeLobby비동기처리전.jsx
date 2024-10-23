@@ -426,19 +426,28 @@ const JudgeLobby = () => {
   };
 
   const handleMachineCheck = () => {
-    const savedCurrentContest = JSON.parse(
-      localStorage.getItem("currentContest")
-    );
-    console.log(savedCurrentContest);
-    console.log(currentContest);
+    const savedCurrentContest = localStorage.getItem("currentContest");
     const loginedJudgeUid = localStorage.getItem("loginedUid");
 
     // 타이머 변수를 선언합니다.
     let timer;
 
-    // 최대 2초 대기 후 currentContest를 기다림
-    timer = setTimeout(() => {
-      if (!savedCurrentContest?.contests) {
+    if (currentContest?.contests) {
+      // 타이머가 설정되었다면 중단시킴
+      if (timer) clearTimeout(timer);
+
+      // currentContest가 존재할 경우 설정값들을 가져옴
+      setMachineId(currentContest?.machineId);
+      setContestInfo(currentContest?.contests);
+
+      if (loginedJudgeUid) {
+        // loginedJudgeUid가 있을 경우 로컬 상태로 저장
+        setLocalJudgeUid(JSON.parse(loginedJudgeUid));
+      }
+      setIsLoading(false);
+    } else {
+      // currentContest가 없을 경우 타이머를 설정하여 2초 후에 메시지와 함께 이동 로직 실행
+      timer = setTimeout(() => {
         setIsLoading(false);
         setMessage({
           body: "기기 초기값이 설정되지 않았습니다.",
@@ -447,21 +456,7 @@ const JudgeLobby = () => {
           confirmButtonText: "확인",
         });
         setMsgOpen(true);
-      }
-    }, 2000); // 2초 후에 메시지를 출력
-
-    if (savedCurrentContest?.contests) {
-      // currentContest가 존재할 경우 설정값들을 가져옴
-      clearTimeout(timer); // 타이머를 중지시킴
-
-      setMachineId(savedCurrentContest?.machineId);
-      setContestInfo(savedCurrentContest?.contests);
-
-      if (loginedJudgeUid) {
-        // loginedJudgeUid가 있을 경우 로컬 상태로 저장
-        setLocalJudgeUid(JSON.parse(loginedJudgeUid));
-      }
-      setIsLoading(false); // 로딩 상태 종료
+      }, 2000); // 2초 후에 메시지를 출력
     }
   };
 
@@ -645,7 +640,7 @@ const JudgeLobby = () => {
         contestInfo.contestComparesListId
       );
     }
-  }, [contestInfo?.id, isRefresh]);
+  }, [contestInfo, isRefresh]);
 
   useEffect(() => {
     if (realtimeData?.stageId) {
@@ -704,6 +699,10 @@ const JudgeLobby = () => {
       handleLoginCheck(localJudgeUid, currentJudgeInfo.judgeUid);
     }
   }, [localJudgeUid, currentJudgeInfo, realtimeData?.judges]);
+
+  useEffect(() => {
+    console.log(currentStageInfo);
+  }, [currentStageInfo]);
 
   return (
     <>
