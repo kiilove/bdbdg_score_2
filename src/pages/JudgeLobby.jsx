@@ -24,6 +24,7 @@ import { where } from "firebase/firestore";
 
 const JudgeLobby = () => {
   const navigate = useNavigate();
+  const { currentContest } = useContext(CurrentContestContext);
   const [countdown, setCountdown] = useState(5);
   const [compareCountdown, setCompareCountdown] = useState(5);
   const [loginCountdown, setLoginCountdown] = useState(5);
@@ -431,18 +432,19 @@ const JudgeLobby = () => {
     // 타이머 변수를 선언합니다.
     let timer;
 
-    if (savedCurrentContest) {
+    if (currentContest?.contests) {
       // 타이머가 설정되었다면 중단시킴
       if (timer) clearTimeout(timer);
 
       // currentContest가 존재할 경우 설정값들을 가져옴
-      setMachineId(JSON.parse(savedCurrentContest).machineId);
-      setContestInfo(JSON.parse(savedCurrentContest).contests);
+      setMachineId(currentContest?.machineId);
+      setContestInfo(currentContest?.contests);
 
       if (loginedJudgeUid) {
         // loginedJudgeUid가 있을 경우 로컬 상태로 저장
         setLocalJudgeUid(JSON.parse(loginedJudgeUid));
       }
+      setIsLoading(false);
     } else {
       // currentContest가 없을 경우 타이머를 설정하여 2초 후에 메시지와 함께 이동 로직 실행
       timer = setTimeout(() => {
@@ -473,7 +475,7 @@ const JudgeLobby = () => {
   };
 
   const handleMsgClose = () => {
-    navigate("/adminlogin");
+    navigate("/setting");
     setMsgOpen(false);
   };
 
