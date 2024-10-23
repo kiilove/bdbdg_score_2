@@ -48,11 +48,26 @@ const Setting = () => {
   };
 
   const handleSelectContest = async (e) => {
-    setContestId((prev) => (prev = e.target.value));
-    const returnContests = await fetchContest.getDocument(contestId);
+    const selectedContestId = e.target.value;
 
-    if (returnContests) {
-      setCurrentContest({ ...currentContest, contests: returnContests });
+    // 먼저 contestId를 업데이트한 후 비동기 작업을 처리합니다.
+    setContestId(selectedContestId);
+
+    try {
+      // contestId가 업데이트된 이후에 fetchContest.getDocument 호출
+      const returnContests = await fetchContest.getDocument(selectedContestId);
+
+      // returnContests가 제대로 반환되었는지 확인 후 처리
+      if (returnContests) {
+        setCurrentContest((prev) => ({
+          ...prev,
+          contests: returnContests,
+        }));
+      } else {
+        console.error("No contest data found.");
+      }
+    } catch (error) {
+      console.error("Error fetching contest data:", error);
     }
   };
 
@@ -60,10 +75,10 @@ const Setting = () => {
     const machineNumber = e.target.value;
 
     if (machineNumber) {
-      setCurrentContest({
-        ...currentContest,
+      setCurrentContest((prev) => ({
+        ...prev,
         machineId: parseInt(machineNumber),
-      });
+      }));
     }
   };
 
@@ -93,7 +108,7 @@ const Setting = () => {
             {collectionPool?.length > 0 &&
               collectionPool.map((collection, cIdx) => {
                 const { collectionName, id } = collection;
-                console.log(collection);
+
                 return (
                   <option key={cIdx} value={id}>
                     {collectionName}
