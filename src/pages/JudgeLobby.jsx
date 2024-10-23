@@ -189,6 +189,7 @@ const JudgeLobby = () => {
           compareMode
         ),
       ]);
+      setIsLoading(false);
     }
   };
 
@@ -201,8 +202,7 @@ const JudgeLobby = () => {
     prevComparePlayers = [],
     realtimeComparemode = {}
   ) => {
-    const { stageId, stageNumber, categoryJudgeType, categorySection } =
-      stageInfo;
+    const { stageId, stageNumber, categoryJudgeType } = stageInfo;
     const {
       judgeUid,
       judgeName,
@@ -237,7 +237,7 @@ const JudgeLobby = () => {
 
       // topOnly 설정인 경우
       if (
-        realtimeData.compares.scoreMode === "topOnly" &&
+        realtimeData.compares?.scoreMode === "topOnly" &&
         topPlayers.length > 0
       ) {
         comparePlayers = [...topPlayers];
@@ -245,7 +245,7 @@ const JudgeLobby = () => {
 
       // topWithSub 설정인 경우
       if (
-        realtimeData.compares.scoreMode === "topWithSub" &&
+        realtimeData.compares?.scoreMode === "topWithSub" &&
         prevComparePlayers.length > 0
       ) {
         comparePlayers = [...prevComparePlayers];
@@ -427,21 +427,34 @@ const JudgeLobby = () => {
   const handleMachineCheck = () => {
     const savedCurrentContest = localStorage.getItem("currentContest");
     const loginedJudgeUid = localStorage.getItem("loginedUid");
+
+    // 타이머 변수를 선언합니다.
+    let timer;
+
     if (savedCurrentContest) {
+      // 타이머가 설정되었다면 중단시킴
+      if (timer) clearTimeout(timer);
+
+      // currentContest가 존재할 경우 설정값들을 가져옴
       setMachineId(JSON.parse(savedCurrentContest).machineId);
       setContestInfo(JSON.parse(savedCurrentContest).contests);
+
       if (loginedJudgeUid) {
+        // loginedJudgeUid가 있을 경우 로컬 상태로 저장
         setLocalJudgeUid(JSON.parse(loginedJudgeUid));
       }
     } else {
-      setIsLoading(false);
-      setMessage({
-        body: "기기 초기값이 설정되지 않았습니다.",
-        body2: "관리자 로그인페이지로 이동합니다.",
-        isButton: true,
-        confirmButtonText: "확인",
-      });
-      setMsgOpen(true);
+      // currentContest가 없을 경우 타이머를 설정하여 2초 후에 메시지와 함께 이동 로직 실행
+      timer = setTimeout(() => {
+        setIsLoading(false);
+        setMessage({
+          body: "기기 초기값이 설정되지 않았습니다.",
+          body2: "관리자 로그인페이지로 이동합니다.",
+          isButton: true,
+          confirmButtonText: "확인",
+        });
+        setMsgOpen(true);
+      }, 2000); // 2초 후에 메시지를 출력
     }
   };
 
@@ -615,7 +628,8 @@ const JudgeLobby = () => {
   // }, [realtimeData]);
 
   useEffect(() => {
-    if (contestInfo.id && isRefresh) {
+    console.log(contestInfo);
+    if (contestInfo?.id && isRefresh) {
       fetchPool(
         contestInfo.contestStagesAssignId,
         contestInfo.contestJudgesAssignId,
@@ -660,6 +674,7 @@ const JudgeLobby = () => {
   ]);
 
   useEffect(() => {
+    setIsLoading(true);
     if (realtimeData?.stageId) {
       handleCurrentStageInfo(
         realtimeData.stageId,
