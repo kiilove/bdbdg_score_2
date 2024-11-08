@@ -738,8 +738,8 @@ const AutoPointTable = () => {
                                               className={
                                                 playerPointArray[pIdx].point ===
                                                 startPoint + idx
-                                                  ? "flex w-9 h-9 p-2 rounded-lg bg-blue-800 justify-center items-center text-gray-100"
-                                                  : "flex w-9 h-9 p-2 rounded-lg bg-blue-200 justify-center items-center"
+                                                  ? "flex w-16 h-16 p-2 rounded-lg bg-blue-800 justify-center items-center text-gray-100"
+                                                  : "flex w-16 h-16 p-2 rounded-lg bg-blue-200 justify-center items-center"
                                               }
                                               onClick={() =>
                                                 handlePoint(
