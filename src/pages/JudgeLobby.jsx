@@ -88,7 +88,7 @@ const JudgeLobby = () => {
     );
     addLog(`Saved Current Contest: ${JSON.stringify(savedCurrentContest)}`);
 
-    const loginedJudgeUid = localStorage.getItem("loginedUid");
+    const loginedJudgeUid = JSON.parse(localStorage.getItem("loginedUid"));
 
     let timer;
     timer = setTimeout(() => {
@@ -471,6 +471,8 @@ const JudgeLobby = () => {
   };
 
   const handleLoginCheck = (judgeUid, currentJudgeUid) => {
+    console.log(judgeUid);
+    console.log(currentJudgeUid);
     addLog(
       `Login check started: judgeUid=${judgeUid}, currentJudgeUid=${currentJudgeUid}`
     );

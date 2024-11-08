@@ -68,11 +68,12 @@ const AutoPointTable = () => {
   );
   const fetchScoreCardQuery = useFirestoreQuery();
   const {
-    data: compareData,
-    loading,
-    error,
-    getDocument,
-  } = useFirebaseRealtimeGetDocument();
+    data: realtimeData,
+    loading: realtimeLoading,
+    error: realtimeError,
+  } = useFirebaseRealtimeGetDocument(
+    contestInfo?.id ? `currentStage/${contestInfo.id}/compares` : null
+  );
 
   const updateRealTimeJudgeMessage = useFirebaseRealtimeUpdateData();
 
@@ -131,10 +132,10 @@ const AutoPointTable = () => {
 
   // 심사표 전송을 하기전에 이중 등록을 방지하기 위해 gradeId,judgeUid값을 받아서
   // 문서id를 수집한후에 map으로 돌리면서 삭제해줌
-  const deletePreScoreCard = async (collectionName, gradeId, judgeUid) => {
+  const deletePreScoreCard = async (collectionName, gradeId, seatIndex) => {
     const condition = [
       where("gradeId", "==", gradeId),
-      where("judgeUid", "==", judgeUid),
+      where("seatIndex", "==", seatIndex),
     ];
 
     const getDocuId = await fetchScoreCardQuery.getDocuments(
@@ -211,7 +212,7 @@ const AutoPointTable = () => {
         await deletePreScoreCard(
           contestInfo.collectionName,
           data.gradeId,
-          data.judgeUid
+          data.seatIndex
         );
 
         const {
@@ -292,6 +293,8 @@ const AutoPointTable = () => {
   };
 
   const handleValidateScore = async (collectionName, prevState) => {
+    console.log("Starting validation for score cards:", prevState); // 검증 시작 로그
+
     if (prevState?.length <= 0) {
       setMessage({
         delete: "end",
@@ -299,11 +302,16 @@ const AutoPointTable = () => {
         validate: "fail",
         validateMsg: "데이터 공유에 문제가 발생했습니다.",
       });
+      console.error("No previous state to validate."); // 데이터 없을 때 에러 로그
       return;
     }
 
     prevState.map(async (state, sIdx) => {
       const { gradeId, judgeUid, playerUid, playerScore } = state;
+      console.log(
+        `Validating: gradeId=${gradeId}, judgeUid=${judgeUid}, playerUid=${playerUid}`
+      ); // 검증할 데이터 로그
+
       const condition = [
         where("gradeId", "==", gradeId),
         where("judgeUid", "==", judgeUid),
@@ -315,6 +323,8 @@ const AutoPointTable = () => {
         condition
       );
 
+      console.log("Fetched documents for validation:", getAddedData); // 가져온 문서들 확인
+
       if (getAddedData?.length > 1) {
         setMessage({
           delete: "end",
@@ -322,6 +332,7 @@ const AutoPointTable = () => {
           validate: "fail",
           validateMsg: "다중 저장된 데이터가 있습니다.",
         });
+        console.error("Duplicate data found during validation."); // 다중 데이터 있을 때 에러 로그
       }
 
       switch (getAddedData?.length) {
@@ -332,6 +343,7 @@ const AutoPointTable = () => {
             validate: "fail",
             validateMsg: "데이터 저장에 문제가 있습니다.",
           });
+          console.error("No data found for validation."); // 데이터 없을 때 에러 로그
           break;
 
         case 1:
@@ -342,6 +354,7 @@ const AutoPointTable = () => {
               validate: "end",
               validateMsg: "검증완료",
             });
+            console.log("Validation successful for:", state); // 성공적으로 검증된 데이터 로그
           } else {
             setMessage({
               delete: "end",
@@ -349,6 +362,12 @@ const AutoPointTable = () => {
               validate: "fail",
               validateMsg: "저장된 데이터 오류",
             });
+            console.error(
+              "Validation failed. Expected score:",
+              playerScore,
+              "but found:",
+              getAddedData[0].playerScore
+            ); // 잘못된 점수일 때 에러 로그
           }
           break;
 
@@ -383,7 +402,7 @@ const AutoPointTable = () => {
               currentStageInfo,
               currentJudgeInfo,
               contestInfo,
-              compareInfo: { ...compareData },
+              compareInfo: { ...realtimeData },
             },
           })
         );
@@ -395,7 +414,7 @@ const AutoPointTable = () => {
   useEffect(() => {
     console.log(currentStageInfo);
     const newCurrentStageInfo = [...currentStageInfo];
-    if (newCurrentStageInfo && compareData?.scoreMode !== "compare") {
+    if (newCurrentStageInfo && realtimeData?.scoreMode !== "compare") {
       const hasUndefinedScoreOwner = newCurrentStageInfo.some((stage) => {
         return (
           stage.originalPlayers &&
@@ -422,33 +441,17 @@ const AutoPointTable = () => {
   }, [location]);
 
   useEffect(() => {
-    //console.log(compareData);
-    if (compareData?.players?.length > 0) {
-      setTopPlayersArray(() => [...compareData.players]);
+    //console.log(realtimeData);
+    if (realtimeData?.players?.length > 0) {
+      setTopPlayersArray(() => [...realtimeData.players]);
     }
-  }, [compareData?.status]);
+  }, [realtimeData?.status]);
 
   useEffect(() => {
-    if (compareData?.status?.compareStart) {
+    if (realtimeData?.status?.compareStart) {
       handleComparePopup();
     }
-  }, [compareData?.status?.compareStart]);
-
-  useEffect(() => {
-    if (currentContest?.contests?.id) {
-      // Debounce the getDocument call to once every second
-      const debouncedGetDocument = debounce(
-        () =>
-          getDocument(
-            `currentStage/${currentContest.contests.id}/compares`,
-            currentContest.contests.id
-          ),
-        1000
-      );
-      debouncedGetDocument();
-    }
-    return () => {};
-  }, [getDocument]);
+  }, [realtimeData?.status?.compareStart]);
 
   useEffect(() => {
     console.log(location);
@@ -514,7 +517,7 @@ const AutoPointTable = () => {
                   채점모드
                 </div>
                 <div className="flex w-32 h-auto py-2 justify-center items-center text-xl font-semibold">
-                  {compareData?.status?.compareIng ? "비교심사" : "일반심사"}
+                  {realtimeData?.status?.compareIng ? "비교심사" : "일반심사"}
                 </div>
                 <div className="flex w-32 h-auto py-2 justify-center items-center ">
                   {currentStageInfo[0].isHead && (
@@ -773,19 +776,38 @@ const AutoPointTable = () => {
                 ))}
 
               <div className="flex w-full justify-start items-center flex-col gap-y-2">
-                <div className="flex h-full rounded-md gap-y-2 flex-col w-full"></div>
                 <div className="flex w-full h-auto py-2">
                   <div className="flex w-1/2 h-24 p-2">
-                    <div className="flex rounded-lg">
+                    <div className="flex w-full rounded-lg">
                       <div className="flex w-1/6 justify-center items-center text-lg">
                         서명
                       </div>
                       <div className="flex w-5/6 justify-center items-center h-20 ">
-                        {currentJudgeInfo && (
-                          <CanvasWithImageData
-                            imageData={currentStageInfo[0].judgeSignature}
-                          />
-                        )}
+                        {currentJudgeInfo &&
+                          (currentStageInfo[0].judgeSignature ? (
+                            // <CanvasWithImageData
+                            //   imageData={currentStageInfo[0].judgeSignature}
+                            // />
+                            <div
+                              className="flex w-full justify-center items-center"
+                              style={{ height: "150px" }}
+                            >
+                              <img
+                                src={currentStageInfo[0].judgeSignature}
+                                alt="서명"
+                                style={{ width: "150px", height: "100px" }}
+                              />
+                            </div>
+                          ) : (
+                            <div className="flex flex-col">
+                              <span style={{ fontSize: 12 }}>
+                                사인을 불러오지 못했지만
+                              </span>
+                              <span style={{ fontSize: 12 }}>
+                                심사에는 지장이 없습니다.
+                              </span>
+                            </div>
+                          ))}
                       </div>
                     </div>
                   </div>
