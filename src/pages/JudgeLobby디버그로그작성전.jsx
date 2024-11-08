@@ -51,8 +51,7 @@ const JudgeLobby = () => {
   const [judgeCompareVoted, setJudgeCompareVoted] = useState();
   const [navigateType, setNavigateType] = useState("");
   const [cardType, setCardType] = useState("score");
-  const [logs, setLogs] = useState([]); // 디버깅 로그 저장 상태
-  const [showLogs, setShowLogs] = useState(false); // 로그 표시 여부
+
   const [localJudgeUid, setLocalJudgeUid] = useState();
   const [currentplayersFinalArray, setCurrentPlayersFinalArray] = useState([]);
   const [currentStagesAssign, setCurrentStagesAssign] = useState({});
@@ -77,46 +76,6 @@ const JudgeLobby = () => {
   const fetchCompareList = useFirestoreGetDocument("contest_compares_list");
   const fetchJudgePool = useFirestoreQuery();
 
-  const addLog = (logMessage) => {
-    setLogs((prevLogs) => [...prevLogs, logMessage]); // 로그 추가
-  };
-
-  const handleMachineCheck = () => {
-    addLog("Machine check started.");
-    const savedCurrentContest = JSON.parse(
-      localStorage.getItem("currentContest")
-    );
-    addLog(`Saved Current Contest: ${JSON.stringify(savedCurrentContest)}`);
-
-    const loginedJudgeUid = localStorage.getItem("loginedUid");
-
-    let timer;
-    timer = setTimeout(() => {
-      if (!savedCurrentContest?.contests) {
-        setIsLoading(false);
-        setMessage({
-          body: "기기 초기값이 설정되지 않았습니다.",
-          body2: "관리자 로그인페이지로 이동합니다.",
-          isButton: true,
-          confirmButtonText: "확인",
-        });
-        setMsgOpen(true);
-        addLog("기기 초기값이 설정되지 않음");
-      }
-    }, 2000); // 2초 후에 메시지를 출력
-
-    if (savedCurrentContest?.contests) {
-      clearTimeout(timer);
-      setMachineId(savedCurrentContest?.machineId);
-      setContestInfo(savedCurrentContest?.contests);
-      if (loginedJudgeUid) {
-        setLocalJudgeUid(loginedJudgeUid);
-        addLog("JudgeUid: " + loginedJudgeUid);
-      }
-      setIsLoading(false);
-    }
-  };
-
   const fetchPool = async (
     stageId,
     judgeAssignId,
@@ -124,37 +83,38 @@ const JudgeLobby = () => {
     contestId,
     compareListId
   ) => {
-    addLog("Fetching pool data..."); // 로그 추가
     const condition = [where("contestId", "==", contestId)];
     try {
-      const stageData = await fetchStagesAssign.getDocument(stageId);
-      setCurrentStagesAssign([...stageData.stages]);
-      addLog(`Fetched stages: ${JSON.stringify(stageData)}`);
+      await fetchStagesAssign
+        .getDocument(stageId)
+        .then((data) => setCurrentStagesAssign([...data.stages]));
 
-      const judgeData = await fetchJudgeAssign.getDocument(judgeAssignId);
-      setCurrentJudgeAssign([...judgeData.judges]);
-      addLog(`Fetched judges: ${JSON.stringify(judgeData)}`);
+      await fetchJudgeAssign.getDocument(judgeAssignId).then((data) => {
+        setCurrentJudgeAssign([...data.judges]);
+      });
 
-      const playersData = await fetchPlayersFinal.getDocument(playersFinalId);
-      setCurrentPlayersFinalArray([
-        ...playersData.players.filter((f) => f.playerNoShow === false),
-      ]);
-      addLog(`Fetched players: ${JSON.stringify(playersData)}`);
+      await fetchPlayersFinal
+        .getDocument(playersFinalId)
+        .then((data) =>
+          setCurrentPlayersFinalArray([
+            ...data.players.filter((f) => f.playerNoShow === false),
+          ])
+        );
 
-      const compareData = await fetchCompareList.getDocument(compareListId);
-      if (compareData?.compares?.length > 0) {
-        setCurrentComparesArray([...compareData.compares]);
-        addLog(`Fetched compares: ${JSON.stringify(compareData)}`);
-      }
-
-      const poolData = await fetchJudgePool.getDocuments(
-        "contest_judges_pool",
-        condition
-      );
-      setJudgePoolsArray([...poolData]);
-      addLog(`Fetched judge pool: ${JSON.stringify(poolData)}`);
+      await fetchCompareList.getDocument(compareListId).then((data) => {
+        if (data?.compares?.length > 0) {
+          console.log(data);
+          setCurrentComparesArray(() => [...data.compares]);
+        }
+      });
+      await fetchJudgePool
+        .getDocuments("contest_judges_pool", condition)
+        .then((data) => {
+          console.log(data);
+          setJudgePoolsArray([...data]);
+        });
     } catch (error) {
-      addLog(`Error fetching pool data: ${error.message}`);
+      console.log(error);
     } finally {
       setIsRefresh(false);
     }
@@ -168,8 +128,6 @@ const JudgeLobby = () => {
     playersFinalArray,
     comparesArray
   ) => {
-    addLog("Handling current stage info...");
-
     let topPlayers = [];
     let compareMode = "";
     let grades = [];
@@ -179,10 +137,12 @@ const JudgeLobby = () => {
 
     if (stageId && stagesAssign?.length > 0) {
       findCurrentStage = stagesAssign.find((f) => f.stageId === stageId);
+      //console.log(findCurrentStage);
       if (findCurrentStage?.categoryJudgeType === "ranking") {
-        setCardType("score");
-      } else if (findCurrentStage?.categoryJudgeType === "point") {
-        setCardType("point");
+        setCardType(() => "score");
+      }
+      if (findCurrentStage?.categoryJudgeType === "point") {
+        setCardType(() => "point");
       }
       grades = [...findCurrentStage?.grades];
 
@@ -192,26 +152,24 @@ const JudgeLobby = () => {
             f.seatIndex === machineId && f.contestGradeId == grades[0].gradeId
         );
       }
-      addLog(`Found current stage: ${JSON.stringify(findCurrentStage)}`);
-      addLog(`Found current judge: ${JSON.stringify(findCurrentJudge)}`);
     }
 
+    //    console.log(realtimeData?.compares?.players);
     if (
       realtimeData?.compares?.players?.length > 0 &&
       realtimeData.compares.status.compareIng
     ) {
       topPlayers = [...realtimeData.compares.players];
+      // console.log(topPlayers);
       compareMode = realtimeData.compares;
-      addLog(
-        `Real-time comparison in progress: ${JSON.stringify(compareMode)}`
-      );
     }
 
     if (realtimeData?.compares?.compareIndex > 1) {
+      //이전 회차 top선수를 찾아야하므로 -1 되어야 한다.
       findCurrentCompare = currentComparesArray.find(
         (f) => f.compareIndex === realtimeData.compares.compareIndex - 1
       );
-      addLog(`Found previous compare: ${JSON.stringify(findCurrentCompare)}`);
+      console.log(findCurrentCompare);
     }
 
     if (
@@ -220,9 +178,9 @@ const JudgeLobby = () => {
       grades.length > 0 &&
       playersFinalArray.length > 0
     ) {
-      setCurrentJudgeInfo(findCurrentJudge);
-      setCurrentStageInfo(
-        makeScoreCard(
+      setCurrentJudgeInfo(() => ({ ...findCurrentJudge }));
+      setCurrentStageInfo([
+        ...makeScoreCard(
           findCurrentStage,
           findCurrentJudge,
           grades,
@@ -230,12 +188,9 @@ const JudgeLobby = () => {
           topPlayers,
           findCurrentCompare?.players,
           compareMode
-        )
-      );
+        ),
+      ]);
       setIsLoading(false);
-      addLog("Stage info successfully processed.");
-    } else {
-      addLog("Error: Missing stage or judge info.");
     }
   };
 
@@ -470,28 +425,57 @@ const JudgeLobby = () => {
     return scoreCardInfo;
   };
 
-  const handleLoginCheck = (judgeUid, currentJudgeUid) => {
-    addLog(
-      `Login check started: judgeUid=${judgeUid}, currentJudgeUid=${currentJudgeUid}`
+  const handleMachineCheck = () => {
+    const savedCurrentContest = JSON.parse(
+      localStorage.getItem("currentContest")
     );
+    console.log(savedCurrentContest);
+    console.log(currentContest);
+    const loginedJudgeUid = localStorage.getItem("loginedUid");
 
+    // 타이머 변수를 선언합니다.
+    let timer;
+
+    // 최대 2초 대기 후 currentContest를 기다림
+    timer = setTimeout(() => {
+      if (!savedCurrentContest?.contests) {
+        setIsLoading(false);
+        setMessage({
+          body: "기기 초기값이 설정되지 않았습니다.",
+          body2: "관리자 로그인페이지로 이동합니다.",
+          isButton: true,
+          confirmButtonText: "확인",
+        });
+        setMsgOpen(true);
+      }
+    }, 2000); // 2초 후에 메시지를 출력
+
+    if (savedCurrentContest?.contests) {
+      // currentContest가 존재할 경우 설정값들을 가져옴
+      clearTimeout(timer); // 타이머를 중지시킴
+
+      setMachineId(savedCurrentContest?.machineId);
+      setContestInfo(savedCurrentContest?.contests);
+
+      if (loginedJudgeUid) {
+        // loginedJudgeUid가 있을 경우 로컬 상태로 저장
+        setLocalJudgeUid(JSON.parse(loginedJudgeUid));
+      }
+      setIsLoading(false); // 로딩 상태 종료
+    }
+  };
+
+  const handleLoginCheck = (judgeUid, currentJudgeUid) => {
     if (!judgeUid) {
       setJudgeLogined(false);
-      addLog("No judgeUid provided, setting judgeLogined to false.");
     }
 
     if (judgeUid !== currentJudgeUid) {
       setJudgeLogined(false);
-      addLog(
-        `judgeUid (${judgeUid}) does not match currentJudgeUid (${currentJudgeUid}), setting judgeLogined to false.`
-      );
     }
 
     if (judgeUid === currentJudgeUid) {
       setJudgeLogined(true);
-      addLog(
-        `judgeUid matches currentJudgeUid (${judgeUid}), setting judgeLogined to true.`
-      );
     }
   };
 
@@ -665,7 +649,6 @@ const JudgeLobby = () => {
 
   useEffect(() => {
     if (realtimeData?.stageId) {
-      addLog(`Realtime data detected: ${JSON.stringify(realtimeData)}`);
       setIsLoading(false);
       handleCurrentStageInfo(
         realtimeData.stageId,
@@ -732,12 +715,6 @@ const JudgeLobby = () => {
       <div className="flex w-full h-screen flex-col bg-white justify-center items-start ">
         <div className="flex w-full h-14 justify-end items-center px-5 gap-x-2">
           <button
-            className="border px-4 py-2 rounded-md bg-gray-500 text-white"
-            onClick={() => setShowLogs(!showLogs)}
-          >
-            {showLogs ? "로그 숨기기" : "로그 보기"}
-          </button>
-          <button
             className="flex border px-5 py-2 rounded-lg"
             onClick={() => navigate("/lobby", { replace: true })}
           >
@@ -779,13 +756,6 @@ const JudgeLobby = () => {
               </span>
             )}
           </div>
-          {/* 로그 출력 */}
-          {showLogs && (
-            <div className="p-4 bg-gray-200 w-full h-64 overflow-auto">
-              <h3 className="text-lg font-bold">디버그 로그</h3>
-              <pre className="text-xs">{logs.join("\n")}</pre>
-            </div>
-          )}
           <div className="flex w-full justify-center items-center h-auto py-20">
             <div className="flex w-full justify-start items-center flex-col">
               {judgeLogined &&

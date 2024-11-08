@@ -4,7 +4,6 @@ import {
   useFirestoreQuery,
 } from "../hooks/useFirestores";
 import { CurrentContestContext } from "../contexts/CurrentContestContext";
-
 import { useNavigate } from "react-router-dom";
 import { BasicDataContext } from "../contexts/BasicDataContext";
 import { where } from "firebase/firestore";
@@ -12,6 +11,8 @@ import { where } from "firebase/firestore";
 const Setting = () => {
   const [collectionPool, setCollectionPool] = useState([]);
   const [contestId, setContestId] = useState("");
+  const [logs, setLogs] = useState([]); // 디버깅 로그 저장
+  const [showLogs, setShowLogs] = useState(false); // 로그 보이기 여부
   const { currentContest, setCurrentContest } = useContext(
     CurrentContestContext
   );
@@ -21,14 +22,18 @@ const Setting = () => {
   const fetchContest = useFirestoreGetDocument("contests");
   const navigate = useNavigate();
 
+  const addLog = (message) => {
+    setLogs((prevLogs) => [...prevLogs, message]);
+  };
+
   const fetchNotice = async (contestId) => {
     const condition = [where("refContestId", "==", contestId)];
     const returnNotice = await fetchContestNotice.getDocuments(
       "contest_notice",
       condition
     );
-    console.log(contestId);
-    console.log(returnNotice);
+    addLog(`Fetching notice for contestId: ${contestId}`);
+    addLog(`Fetched notice: ${JSON.stringify(returnNotice)}`);
     if (returnNotice.length > 0) {
       setCurrentContest((prev) => ({
         ...prev,
@@ -43,31 +48,31 @@ const Setting = () => {
       "contests",
       condition
     );
-    console.log(returnContest);
+    addLog(`Fetched contest pool: ${JSON.stringify(returnContest)}`);
     setCollectionPool(returnContest);
   };
 
   const handleSelectContest = async (e) => {
     const selectedContestId = e.target.value;
-
-    // 먼저 contestId를 업데이트한 후 비동기 작업을 처리합니다.
     setContestId(selectedContestId);
 
     try {
-      // contestId가 업데이트된 이후에 fetchContest.getDocument 호출
       const returnContests = await fetchContest.getDocument(selectedContestId);
 
-      // returnContests가 제대로 반환되었는지 확인 후 처리
       if (returnContests) {
         setCurrentContest((prev) => ({
           ...prev,
           contests: returnContests,
         }));
+        addLog(`Contest data loaded: ${JSON.stringify(returnContests)}`);
       } else {
-        console.error("No contest data found.");
+        throw new Error("No contest data found.");
       }
     } catch (error) {
-      console.error("Error fetching contest data:", error);
+      console.error("Error fetching contest data:", error.message);
+      addLog(`Error: ${error.message}`);
+      alert("해당 대회의 데이터를 불러오지 못했습니다. 다시 시도해주세요.");
+      return;
     }
   };
 
@@ -79,6 +84,7 @@ const Setting = () => {
         ...prev,
         machineId: parseInt(machineNumber),
       }));
+      addLog(`Machine ID set: ${machineNumber}`);
     }
   };
 
@@ -101,7 +107,7 @@ const Setting = () => {
         <div className="flex w-3/4 justify-start items-center bg-gray-100 h-14">
           <select
             name="selectContest"
-            className="ml-5 h-12 w-64 text-lg p-2" // select 크기 조정
+            className="ml-5 h-12 w-64 text-lg p-2"
             onChange={(e) => handleSelectContest(e)}
           >
             <option>선택</option>
@@ -125,12 +131,12 @@ const Setting = () => {
         <div className="flex w-3/4 justify-start items-center bg-gray-100 h-14">
           <input
             type="text"
-            className="ml-5 h-12 w-64 text-lg p-2" // input 크기 조정
+            className="ml-5 h-12 w-64 text-lg p-2"
             onChange={(e) => handleMachineInfo(e)}
           />
         </div>
       </div>
-      <div className="flex w-full justify-end ">
+      <div className="flex w-full justify-end">
         <button
           className="mr-5 px-2 w-auto h-auto bg-blue-500 p-5 rounded-lg text-white"
           onClick={() => navigate("/lobby")}
@@ -138,6 +144,24 @@ const Setting = () => {
           로비로 이동
         </button>
       </div>
+
+      {/* 로그 보기 버튼 */}
+      <div className="flex w-full justify-end mt-5">
+        <button
+          className="mr-5 px-2 w-auto h-auto bg-green-500 p-5 rounded-lg text-white"
+          onClick={() => setShowLogs(!showLogs)}
+        >
+          로그 보기
+        </button>
+      </div>
+
+      {/* 로그 출력 */}
+      {showLogs && (
+        <div className="mt-5 p-5 bg-gray-100 h-64 overflow-auto">
+          <h3 className="text-lg font-bold">디버그 로그:</h3>
+          <pre className="text-sm">{logs.join("\n")}</pre>
+        </div>
+      )}
     </div>
   );
 };
