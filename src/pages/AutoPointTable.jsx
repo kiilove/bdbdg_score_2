@@ -717,7 +717,14 @@ const AutoPointTable = () => {
                                           maxWidth: "430px",
                                         }}
                                       >
-                                        <div className="flex text-sm justify-center items-center w-full bg-blue-300 h-10 rounded-lg px-2">
+                                        <div
+                                          className={
+                                            playerPointArray[pIdx].point ===
+                                            undefined
+                                              ? `flex text-sm justify-center items-center w-full bg-blue-500 h-10 rounded-lg px-2 text-white`
+                                              : `flex text-sm justify-center items-center w-full bg-blue-300 h-10 rounded-lg px-2`
+                                          }
+                                        >
                                           <span className="flex justify-start w-1/2 font-semibold">
                                             {title}
                                           </span>
@@ -751,7 +758,9 @@ const AutoPointTable = () => {
                                                 )
                                               }
                                             >
-                                              {startPoint + idx}
+                                              <span style={{ fontSize: 18 }}>
+                                                {startPoint + idx}
+                                              </span>
                                             </button>
                                           ))}
                                         </div>
