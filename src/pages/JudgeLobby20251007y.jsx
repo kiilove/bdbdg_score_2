@@ -1,36 +1,30 @@
-"use client";
-import { useNavigate } from "react-router-dom";
+import React from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   useFirebaseRealtimeGetDocument,
   useFirebaseRealtimeUpdateData,
 } from "../hooks/useFirebaseRealtime";
 import { useEffect } from "react";
+import { debounce } from "lodash";
 import { useContext } from "react";
 import { CurrentContestContext } from "../contexts/CurrentContestContext";
 import { useState } from "react";
 import LoadingPage from "./LoadingPage";
 import ConfirmationModal from "../messageBox/ConfirmationModal";
+import { FaSpinner } from "react-icons/fa";
+import { CgSpinner } from "react-icons/cg";
 import {
   useFirestoreGetDocument,
   useFirestoreQuery,
 } from "../hooks/useFirestores";
-import { Modal, Button, Card, Space, Collapse, Descriptions } from "antd";
-import {
-  UserOutlined,
-  HomeOutlined,
-  SettingOutlined,
-  FileTextOutlined,
-} from "@ant-design/icons";
+import { Modal } from "@mui/material";
 import CompareVote from "./CompareVote";
 import { PointArray } from "../components/PointCard";
 import { where } from "firebase/firestore";
 
-const { Panel } = Collapse;
-
 const JudgeLobby = () => {
   const navigate = useNavigate();
   const { currentContest } = useContext(CurrentContestContext);
-  const [judgeDisplayInfo, setJudgeDisplayInfo] = useState(null);
   const [countdown, setCountdown] = useState(5);
   const [compareCountdown, setCompareCountdown] = useState(5);
   const [loginCountdown, setLoginCountdown] = useState(5);
@@ -57,8 +51,8 @@ const JudgeLobby = () => {
   const [judgeCompareVoted, setJudgeCompareVoted] = useState();
   const [navigateType, setNavigateType] = useState("");
   const [cardType, setCardType] = useState("score");
-  const [logs, setLogs] = useState([]);
-  const [showLogs, setShowLogs] = useState(false);
+  const [logs, setLogs] = useState([]); // 디버깅 로그 저장 상태
+  const [showLogs, setShowLogs] = useState(false); // 로그 표시 여부
   const [localJudgeUid, setLocalJudgeUid] = useState();
   const [currentplayersFinalArray, setCurrentPlayersFinalArray] = useState([]);
   const [currentStagesAssign, setCurrentStagesAssign] = useState({});
@@ -84,7 +78,7 @@ const JudgeLobby = () => {
   const fetchJudgePool = useFirestoreQuery();
 
   const addLog = (logMessage) => {
-    setLogs((prevLogs) => [...prevLogs, logMessage]);
+    setLogs((prevLogs) => [...prevLogs, logMessage]); // 로그 추가
   };
 
   const handleMachineCheck = () => {
@@ -109,7 +103,7 @@ const JudgeLobby = () => {
         setMsgOpen(true);
         addLog("기기 초기값이 설정되지 않음");
       }
-    }, 2000);
+    }, 2000); // 2초 후에 메시지를 출력
 
     if (savedCurrentContest?.contests) {
       clearTimeout(timer);
@@ -130,7 +124,7 @@ const JudgeLobby = () => {
     contestId,
     compareListId
   ) => {
-    addLog("Fetching pool data...");
+    addLog("Fetching pool data..."); // 로그 추가
     const condition = [where("contestId", "==", contestId)];
     try {
       const stageData = await fetchStagesAssign.getDocument(stageId);
@@ -268,6 +262,7 @@ const JudgeLobby = () => {
       (f) => f.judgeUid === judgeUid
     )?.judgeSignature;
 
+    // 점수형에 필요한 정보를 초기화해서 선수 각자에게 부여한후 넘어간다.
     const playerPointArray = PointArray.map((point) => {
       const { title } = point;
       return { title, point: undefined };
@@ -286,6 +281,7 @@ const JudgeLobby = () => {
 
       const { categoryId, categoryTitle, gradeId, gradeTitle } = grade;
 
+      // topOnly 설정인 경우
       if (
         realtimeData.compares?.scoreMode === "topOnly" &&
         topPlayers.length > 0
@@ -293,6 +289,7 @@ const JudgeLobby = () => {
         comparePlayers = [...topPlayers];
       }
 
+      // topWithSub 설정인 경우
       if (
         realtimeData.compares?.scoreMode === "topWithSub" &&
         prevComparePlayers.length > 0
@@ -309,20 +306,19 @@ const JudgeLobby = () => {
         return newPlayers;
       });
 
-      const matchedOriginalRange = matchedOriginalPlayers.map(
-        (player, pIdx) => {
-          return {
-            scoreValue: pIdx + 1,
-            scoreIndex: pIdx,
-            scoreOwner: undefined,
-          };
-        }
-      );
+      let matchedOriginalRange = matchedOriginalPlayers.map((player, pIdx) => {
+        return {
+          scoreValue: pIdx + 1,
+          scoreIndex: pIdx,
+          scoreOwner: undefined,
+        };
+      });
 
       const filterTopPlayers = filterPlayers.filter((fp) =>
         topPlayers.some((cp) => cp.playerNumber === fp.playerNumber)
       );
 
+      // 다회차 비교심사의 경우 이전 회차 선수들 처리
       const filterSubPlayers = comparePlayers.filter((fp) =>
         topPlayers.every((cp) => cp.playerNumber !== fp.playerNumber)
       );
@@ -330,6 +326,7 @@ const JudgeLobby = () => {
       let filterNormalPlayers = [];
       let filterExtraPlayers = [];
 
+      // 'topOnly'와 'topWithSub' 모드 처리
       if (
         realtimeComparemode.scoreMode === "topOnly" ||
         realtimeComparemode.scoreMode === "topWithSub"
@@ -340,12 +337,14 @@ const JudgeLobby = () => {
         );
       }
 
+      // 'all' 모드에서 top에 속한 선수를 제외하고 normal을 생성
       if (realtimeComparemode.scoreMode === "all") {
         filterNormalPlayers = filterPlayers.filter(
           (fp) => !topPlayers.some((cp) => cp.playerNumber === fp.playerNumber)
         );
       }
 
+      // top 범주 처리
       if (filterTopPlayers?.length > 0) {
         const matchedPlayers = filterTopPlayers.map((player) => {
           const newPlayers = { ...player, playerScore: 0, playerPointArray };
@@ -361,6 +360,7 @@ const JudgeLobby = () => {
         });
       }
 
+      // sub 범주 처리
       if (filterSubPlayers?.length > 0) {
         const matchedPlayers = filterSubPlayers.map((player) => {
           const newPlayers = { ...player, playerScore: 0, playerPointArray };
@@ -376,6 +376,7 @@ const JudgeLobby = () => {
         });
       }
 
+      // normal 범주 처리
       if (filterNormalPlayers?.length > 0) {
         const matchedPlayers = filterNormalPlayers.map((player) => {
           const newPlayers = { ...player, playerScore: 0, playerPointArray };
@@ -383,6 +384,7 @@ const JudgeLobby = () => {
         });
         matchedNormalPlayers = [...matchedPlayers];
 
+        // scoreValue는 topPlayers와 subPlayers에 이어서 할당
         matchedNormalRange = matchedPlayers.map((player, pIdx) => {
           return {
             scoreValue:
@@ -394,6 +396,7 @@ const JudgeLobby = () => {
         });
       }
 
+      // extra 범주 처리 (top, normal에 속하지 않는 선수)
       if (filterExtraPlayers?.length > 0) {
         const matchedPlayers = filterExtraPlayers.map((player) => {
           const newPlayers = { ...player, playerScore: 1000, playerPointArray };
@@ -408,6 +411,7 @@ const JudgeLobby = () => {
           };
         });
 
+        // matchedOriginalPlayers에서 1000등으로 설정
         const newMatchedOriginalPlayers = matchedOriginalPlayers.map(
           (player) => {
             const newPlayerScore = matchedExtraPlayers.some(
@@ -421,6 +425,7 @@ const JudgeLobby = () => {
         matchedOriginalPlayers = [...newMatchedOriginalPlayers];
       }
 
+      // top과 normal이 없는 경우
       if (filterTopPlayers.length === 0 && filterNormalPlayers.length === 0) {
         matchedTopPlayers = [];
         matchedTopRange = [];
@@ -498,12 +503,12 @@ const JudgeLobby = () => {
   };
 
   const handleNavigate = async ({ actionType }) => {
-    console.log("handleNavigate called with actionType:", actionType);
+    console.log("handleNavigate called with actionType:", actionType); // 콘솔 로그 추가
     const collectionInfo = `currentStage/${contestInfo.id}/judges/${
       currentJudgeInfo.seatIndex - 1
     }`;
 
-    console.log("collectionInfo:", collectionInfo);
+    console.log("collectionInfo:", collectionInfo); // 콘솔 로그 추가
     console.log(currentJudgeInfo.seatIndex - 1);
     let prevTop = [];
 
@@ -583,10 +588,10 @@ const JudgeLobby = () => {
               ...currentComparesArray[currentComparesArray.length - 1].players,
             ];
           } else {
-            prevTop = [];
+            prevTop = []; // prevTop을 빈 배열로 초기화
           }
 
-          console.log("prevTop:", prevTop);
+          console.log("prevTop:", prevTop); // 콘솔 로그 추가
 
           const collectionInfoVote = `currentStage/${
             contestInfo.id
@@ -605,12 +610,12 @@ const JudgeLobby = () => {
                     currentJudgeInfo,
                     contestInfo,
                     compareInfo: { ...realtimeData?.compares },
-                    propSubPlayers: [...prevTop],
+                    propSubPlayers: [...prevTop], // 추가된 prevTop 확인
                   },
                 });
               });
           } catch (error) {
-            console.error("Error during updateRealtimeData:", error);
+            console.error("Error during updateRealtimeData:", error); // 예외 발생 시 오류 출력
           }
           break;
 
@@ -637,34 +642,15 @@ const JudgeLobby = () => {
       }, 1000);
     }
 
-    return () => clearInterval(timer);
+    return () => clearInterval(timer); // cleanup
   }, [realtimeData?.stageId]);
 
-  useEffect(() => {
-    if (
-      machineId &&
-      currentJudgeAssign?.length > 0 &&
-      judgePoolsArray.length > 0
-    ) {
-      const assignedJudge = currentJudgeAssign.find(
-        (j) => j.seatIndex === machineId
-      );
-
-      if (assignedJudge) {
-        const judgeInfo = judgePoolsArray.find(
-          (f) => f.judgeUid === assignedJudge.judgeUid
-        );
-
-        if (judgeInfo) {
-          setJudgeDisplayInfo({
-            name: judgeInfo.judgeName,
-            gym: judgeInfo.judgeGym,
-            signature: judgeInfo.judgeSignature,
-          });
-        }
-      }
-    }
-  }, [machineId, currentJudgeAssign, judgePoolsArray]);
+  // useEffect(() => {
+  //   if (realtimeData) {
+  //     // 데이터가 변경되면 처리할 로직 추가
+  //     setCurrentStageInfo(realtimeData);
+  //   }
+  // }, [realtimeData]);
 
   useEffect(() => {
     console.log(contestInfo);
@@ -677,7 +663,7 @@ const JudgeLobby = () => {
         contestInfo.contestComparesListId
       );
     }
-  }, [contestInfo, isRefresh]);
+  }, [contestInfo?.id, isRefresh]);
 
   useEffect(() => {
     if (realtimeData?.stageId) {
@@ -704,6 +690,7 @@ const JudgeLobby = () => {
 
     if (realtimeData?.judges[machineId - 1]) {
       setJudgeScoreEnd(() => realtimeData?.judges[machineId - 1]?.isEnd);
+      // console.log(judgeScoreEnd);
     }
   }, [
     currentJudgeAssign,
@@ -744,284 +731,229 @@ const JudgeLobby = () => {
           <LoadingPage />
         </div>
       )}
-      <div className="flex w-full h-screen flex-col bg-white">
-        <ConfirmationModal
-          isOpen={msgOpen}
-          message={message}
-          onCancel={handleMsgClose}
-          onConfirm={handleMsgClose}
-        />
-        <Modal open={compareVoteOpen} onClose={() => setCompareVoteOpen(false)}>
-          <CompareVote />
-        </Modal>
-
-        {/* 상단 버튼 영역 */}
-        <div className="flex w-full justify-end items-center px-5 py-3 bg-white border-b gap-x-2">
-          <Button
-            icon={<FileTextOutlined />}
+      <div className="flex w-full h-screen flex-col bg-white justify-center items-start ">
+        <div className="flex w-full h-14 justify-end items-center px-5 gap-x-2">
+          <button
+            className="border px-4 py-2 rounded-md bg-gray-500 text-white"
             onClick={() => setShowLogs(!showLogs)}
           >
             {showLogs ? "로그 숨기기" : "로그 보기"}
-          </Button>
-          <Button
-            icon={<HomeOutlined />}
+          </button>
+          <button
+            className="flex border px-5 py-2 rounded-lg"
             onClick={() => navigate("/lobby", { replace: true })}
           >
             대기화면 강제이동
-          </Button>
-          <Button
-            icon={<SettingOutlined />}
+          </button>
+
+          <button
+            className="flex border px-5 py-2 rounded-lg"
             onClick={() => navigate("/setting", { replace: true })}
           >
             기기설정
-          </Button>
+          </button>
         </div>
-
-        {/* 메인 컨텐츠 영역 */}
-        <div className="flex-1 flex flex-col justify-center items-center p-4 md:p-8">
-          <Space direction="vertical" size="large" className="w-full max-w-4xl">
-            {/* JUDGE 번호 카드 */}
-            <Card
-              className="text-center shadow-2xl border-0"
-              style={{
-                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-              }}
-            >
-              <Space direction="vertical" size="large" className="w-full">
-                <div className="flex flex-col items-center justify-center gap-2">
-                  <span className="text-white text-4xl md:text-5xl font-light tracking-wider">
-                    JUDGE
-                  </span>
-                  <span className="text-white text-8xl md:text-9xl font-bold tracking-tight">
-                    {machineId}
-                  </span>
-                </div>
-                {realtimeData !== null && (
-                  <div className="pt-4 border-t border-white/30">
-                    <span className="text-white text-2xl md:text-3xl font-medium">
-                      {realtimeData?.categoryTitle} ({realtimeData?.gradeTitle})
-                    </span>
-                  </div>
-                )}
-              </Space>
-            </Card>
-
-            {/* 액션 버튼 영역 */}
-            <Card className="shadow-xl border-0">
-              <Space
-                direction="vertical"
-                size="large"
-                className="w-full items-center"
-              >
-                {/* 로그인 전 */}
-                {!judgeLogined && (
-                  <>
-                    <span className="text-xl md:text-2xl text-center font-medium text-gray-700">
-                      로그인 페이지로 이동합니다.
-                    </span>
-                    <Button
-                      type="primary"
-                      size="large"
-                      onClick={() => handleNavigate({ actionType: "login" })}
-                      className="w-full md:w-auto min-w-[300px] h-16 text-xl font-semibold"
-                      style={{
-                        background:
-                          "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                        border: "none",
-                      }}
-                    >
-                      로그인화면
-                    </Button>
-                  </>
-                )}
-
-                {/* 로그인 후 - 일반 심사 */}
-                {judgeLogined &&
-                  !compareStatus.compareStart &&
-                  !compareStatus.compareIng &&
-                  !judgeScoreEnd && (
-                    <>
-                      <span className="text-xl md:text-2xl text-center font-medium text-gray-700">
-                        {realtimeData?.categoryJudgeType === "point"
-                          ? "점수형"
-                          : "랭킹형"}{" "}
-                        심사페이지로 이동합니다.
-                      </span>
-                      <Button
-                        type="primary"
-                        size="large"
-                        onClick={() =>
-                          handleNavigate({
-                            actionType: realtimeData?.categoryJudgeType,
-                          })
-                        }
-                        className="w-full md:w-auto min-w-[300px] h-16 text-xl font-semibold"
-                        style={{
-                          background:
-                            "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                          border: "none",
-                        }}
-                      >
-                        심사화면으로 이동
-                      </Button>
-                    </>
-                  )}
-
-                {/* 비교심사 진행 중 */}
-                {judgeLogined && compareStatus.compareIng && !judgeScoreEnd && (
-                  <>
-                    <span className="text-xl md:text-2xl text-center font-medium text-gray-700">
+        <div className="flex text-xl font-bold  bg-gray-100 w-full justify-center items-center text-gray-700 flex-col  h-screen ">
+          <ConfirmationModal
+            isOpen={msgOpen}
+            message={message}
+            onCancel={handleMsgClose}
+            onConfirm={handleMsgClose}
+          />
+          <Modal
+            open={compareVoteOpen}
+            onClose={() => setCompareVoteOpen(false)}
+          >
+            <CompareVote />
+          </Modal>
+          <div className="flex w-full justify-center items-center h-auto py-20 ">
+            <span className="text-7xl font-sans font-bold text-gray-800">
+              JUDGE
+            </span>
+            <span className="text-7xl font-sans font-bold text-gray-800 ml-2">
+              {machineId}
+            </span>
+          </div>
+          <div className="flex w-full justify-center items-center h-auto ">
+            {realtimeData !== null && (
+              <span className="text-3xl font-sans font-bold text-gray-800">
+                {realtimeData?.categoryTitle}({realtimeData?.gradeTitle})
+              </span>
+            )}
+          </div>
+          {/* 로그 출력 */}
+          {showLogs && (
+            <div className="p-4 bg-gray-200 w-full h-64 overflow-auto">
+              <h3 className="text-lg font-bold">디버그 로그</h3>
+              <pre className="text-xs">{logs.join("\n")}</pre>
+            </div>
+          )}
+          <div className="flex w-full justify-center items-center h-auto py-20">
+            <div className="flex w-full justify-start items-center flex-col">
+              {judgeLogined &&
+                !compareStatus.compareStart &&
+                !compareStatus.compareIng &&
+                !judgeScoreEnd && (
+                  <div className="flex flex-col items-center gap-y-2">
+                    <span className="text-2xl h-10">
+                      {realtimeData?.categoryJudgeType === "point"
+                        ? "점수형"
+                        : "랭킹형"}{" "}
                       심사페이지로 이동합니다.
                     </span>
-                    <Button
-                      type="primary"
-                      size="large"
+                    <button
                       onClick={() =>
                         handleNavigate({
                           actionType: realtimeData?.categoryJudgeType,
                         })
                       }
-                      className="w-full md:w-auto min-w-[300px] h-16 text-xl font-semibold"
-                      style={{
-                        background:
-                          "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                        border: "none",
-                      }}
+                      className="mt-5 px-6 py-2 bg-blue-500 text-white rounded-md  w-68 h-20 flex justify-center items-center"
                     >
-                      심사화면으로 이동
-                    </Button>
-                  </>
-                )}
-
-                {/* 비교심사 시작 - 투표 전 */}
-                {judgeLogined &&
-                  compareStatus.compareStart &&
-                  judgeCompareVoted === "확인전" && (
-                    <>
-                      <span className="text-xl md:text-2xl text-center font-medium text-gray-700">
-                        비교심사가 시작됩니다.
-                      </span>
-                      <span className="text-lg md:text-xl text-center text-gray-600">
-                        {realtimeData?.compares?.compareIndex}차 비교심사
-                        투표화면으로 이동합니다.
-                      </span>
-                      <Button
-                        type="primary"
-                        size="large"
-                        onClick={() => handleNavigate({ actionType: "vote" })}
-                        className="w-full md:w-auto min-w-[300px] h-16 text-xl font-semibold"
-                        style={{
-                          background:
-                            "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                          border: "none",
-                        }}
-                      >
-                        투표화면
-                      </Button>
-                    </>
-                  )}
-
-                {/* 비교심사 시작 - 투표 중 */}
-                {judgeLogined &&
-                  compareStatus.compareStart &&
-                  judgeCompareVoted === "투표중" && (
-                    <>
-                      <span className="text-xl md:text-2xl text-center font-medium text-gray-700">
-                        비교심사 투표가 완료되지 않았습니다.
-                      </span>
-                      <span className="text-lg md:text-xl text-center text-gray-600">
-                        {realtimeData?.compares?.compareIndex}차 비교심사
-                        투표화면으로 이동합니다.
-                      </span>
-                      <Button
-                        type="primary"
-                        size="large"
-                        onClick={() => handleNavigate({ actionType: "vote" })}
-                        className="w-full md:w-auto min-w-[300px] h-16 text-xl font-semibold"
-                        style={{
-                          background:
-                            "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                          border: "none",
-                        }}
-                      >
-                        투표화면
-                      </Button>
-                    </>
-                  )}
-
-                {/* 비교심사 투표 완료 */}
-                {judgeLogined &&
-                  compareStatus.compareStart &&
-                  judgeCompareVoted === "투표완료" && (
-                    <>
-                      <span className="text-xl md:text-2xl text-center font-medium text-gray-700">
-                        비교심사 투표를 집계중입니다.
-                      </span>
-                      <span className="text-lg md:text-xl text-center text-gray-600">
-                        잠시만 기다려주세요.
-                      </span>
-                    </>
-                  )}
-
-                {/* 집계 중 */}
-                {judgeScoreEnd && !compareStatus.compareStart && (
-                  <>
-                    <span className="text-xl md:text-2xl text-center font-medium text-gray-700">
-                      집계중입니다.
-                    </span>
-                    <span className="text-lg md:text-xl text-center text-gray-600">
-                      잠시만 기다려주세요.
-                    </span>
-                  </>
-                )}
-              </Space>
-            </Card>
-
-            {/* 심판 정보 카드 */}
-            {judgeDisplayInfo && (
-              <Collapse className="border-0 shadow-md">
-                <Panel
-                  header={
-                    <Space>
-                      <UserOutlined />
-                      <span>심판 정보</span>
-                    </Space>
-                  }
-                  key="1"
-                >
-                  <Descriptions column={1}>
-                    <Descriptions.Item label="이름">
-                      {judgeDisplayInfo.name}
-                    </Descriptions.Item>
-                    <Descriptions.Item label="서명">
-                      {judgeDisplayInfo.signature ? (
-                        <img
-                          src={judgeDisplayInfo.signature || "/placeholder.svg"}
-                          alt="서명"
-                          className="w-32 h-20 object-contain border"
+                      <div className="flex w-full">
+                        <span>심사화면으로 이동</span>
+                      </div>
+                      {/* <div className="flex  justify-center items-center w-20 h-20 relative">
+                        <CgSpinner
+                          className="animate-spin w-16 h-16 "
+                          style={{ animationDuration: "1.5s" }}
                         />
-                      ) : (
-                        <span className="text-gray-500">
-                          서명을 불러오지 못했습니다.
+                        <span className="absolute inset-0 flex justify-center items-center">
+                          {countdown}
                         </span>
-                      )}
-                    </Descriptions.Item>
-                  </Descriptions>
-                </Panel>
-              </Collapse>
-            )}
-
-            {/* 디버그 로그 */}
-            {showLogs && (
-              <Collapse className="border-0 shadow-md">
-                <Panel header="디버그 로그" key="1">
-                  <pre className="text-xs overflow-auto max-h-64 bg-gray-100 p-4 rounded">
-                    {logs.join("\n")}
-                  </pre>
-                </Panel>
-              </Collapse>
-            )}
-          </Space>
+                      </div> */}
+                    </button>
+                  </div>
+                )}
+              {judgeLogined && compareStatus.compareIng && !judgeScoreEnd && (
+                <div className="flex flex-col items-center gap-y-2">
+                  <span className="text-2xl h-10">
+                    심사페이지로 이동합니다.
+                  </span>
+                  <button
+                    onClick={() =>
+                      handleNavigate({
+                        actionType: realtimeData?.categoryJudgeType,
+                      })
+                    }
+                    className="mt-5 px-6 py-2 bg-blue-500 text-white rounded-md  w-68 h-20 flex justify-center items-center"
+                  >
+                    <div className="flex w-full">
+                      <span>심사화면으로 이동</span>
+                    </div>
+                    {/* <div className="flex  justify-center items-center w-20 h-20 relative">
+                      <CgSpinner
+                        className="animate-spin w-16 h-16 "
+                        style={{ animationDuration: "1.5s" }}
+                      />
+                      <span className="absolute inset-0 flex justify-center items-center">
+                        {countdown}
+                      </span>
+                    </div> */}
+                  </button>
+                </div>
+              )}
+              {!judgeLogined && (
+                <div className="flex flex-col items-center gap-y-2">
+                  <span className="text-2xl h-10">
+                    로그인 페이지로 이동합니다.
+                  </span>
+                  <button
+                    onClick={() => handleNavigate({ actionType: "login" })}
+                    className="mt-5 px-6 py-2 bg-blue-500 text-white rounded-md  w-68 h-20 flex justify-center items-center"
+                  >
+                    <div className="flex w-full">
+                      <span>로그인화면</span>
+                    </div>
+                    {/* <div className="flex  justify-center items-center w-20 h-20 relative">
+                      <CgSpinner
+                        className="animate-spin w-16 h-16 "
+                        style={{ animationDuration: "1.5s" }}
+                      />
+                      <span className="absolute inset-0 flex justify-center items-center">
+                        {countdown}
+                      </span>
+                    </div> */}
+                  </button>
+                </div>
+              )}
+              {judgeLogined &&
+                compareStatus.compareStart &&
+                judgeCompareVoted === "확인전" && (
+                  <div className="flex flex-col items-center gap-y-2">
+                    <span className="text-2xl h-10">
+                      비교심사가 시작됩니다.
+                    </span>
+                    <span className="text-2xl h-10">
+                      {realtimeData?.compares?.compareIndex}차 비교심사
+                      투표화면으로 이동합니다.
+                    </span>
+                    <button
+                      onClick={() => handleNavigate({ actionType: "vote" })}
+                      className="mt-5 px-6 py-2 bg-blue-500 text-white rounded-md  w-68 h-20 flex justify-center items-center"
+                    >
+                      <div className="flex w-full">
+                        <span>투표화면</span>
+                      </div>
+                      {/* <div className="flex  justify-center items-center w-20 h-20 relative">
+                        <CgSpinner
+                          className="animate-spin w-16 h-16 "
+                          style={{ animationDuration: "1.5s" }}
+                        />
+                        <span className="absolute inset-0 flex justify-center items-center">
+                          {countdown}
+                        </span>
+                      </div> */}
+                    </button>
+                  </div>
+                )}
+              {judgeLogined &&
+                compareStatus.compareStart &&
+                judgeCompareVoted === "투표중" && (
+                  <div className="flex flex-col items-center gap-y-2">
+                    <span className="text-2xl h-10">
+                      비교심사 투표가 완료되지 않았습니다.
+                    </span>
+                    <span className="text-2xl h-10">
+                      {realtimeData?.compares?.compareIndex}차 비교심사
+                      투표화면으로 이동합니다.
+                    </span>
+                    <button
+                      onClick={() => handleNavigate({ actionType: "vote" })}
+                      className="mt-5 px-6 py-2 bg-blue-500 text-white rounded-md  w-68 h-20 flex justify-center items-center"
+                    >
+                      <div className="flex w-full">
+                        <span>투표화면</span>
+                      </div>
+                      {/* <div className="flex  justify-center items-center w-20 h-20 relative">
+                        <CgSpinner
+                          className="animate-spin w-16 h-16 "
+                          style={{ animationDuration: "1.5s" }}
+                        />
+                        <span className="absolute inset-0 flex justify-center items-center">
+                          {countdown}
+                        </span>
+                      </div> */}
+                    </button>
+                  </div>
+                )}
+              {judgeLogined &&
+                compareStatus.compareStart &&
+                judgeCompareVoted === "투표완료" && (
+                  <div className="flex flex-col items-center gap-y-2">
+                    <span className="text-2xl h-10">
+                      비교심사 투표를 집계중입니다.
+                    </span>
+                    <span className="text-2xl h-10">잠시만 기다려주세요.</span>
+                  </div>
+                )}
+              {judgeScoreEnd && !compareStatus.compareStart && (
+                <div className="flex flex-col items-center gap-y-2">
+                  <span className="text-2xl h-10">집계중입니다.</span>
+                  <span className="text-2xl h-10">잠시만 기다려주세요.</span>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </>

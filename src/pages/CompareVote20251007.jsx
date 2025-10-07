@@ -164,10 +164,6 @@ const CompareVote = () => {
     initMatched();
   }, []);
 
-  useEffect(() => {
-    console.log(location);
-  }, [location]);
-
   return (
     <>
       {isLoading ? (

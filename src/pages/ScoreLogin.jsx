@@ -1,15 +1,16 @@
-import React, { useContext, useEffect, useRef, useState } from "react";
+"use client";
+
+import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { debounce } from "lodash"; // Import debounce from lodash
 import {
   useFirebaseRealtimeGetDocument,
   useFirebaseRealtimeUpdateData,
 } from "../hooks/useFirebaseRealtime";
-import { CurrentContestContext } from "../contexts/CurrentContestContext";
-import { useFirestoreGetDocument } from "../hooks/useFirestores";
 import { handleMachineCheck } from "../functions/functions";
 import ConfirmationModal from "../messageBox/ConfirmationModal";
 import LoadingPage from "./LoadingPage";
+import { Button, Input, Alert, Card, Space } from "antd";
+import { ArrowLeftOutlined, LoginOutlined } from "@ant-design/icons";
 
 const ScoreLogin = () => {
   const navigate = useNavigate();
@@ -20,7 +21,7 @@ const ScoreLogin = () => {
   const [message, setMessage] = useState({});
   const [machineId, setMachineId] = useState(null);
   const [contestInfo, setContestInfo] = useState({});
-  const [missingData, setMissingData] = useState([]); // 빠진 데이터를 저장하는 상태 추가
+  const [missingData, setMissingData] = useState([]);
   const [cardType, setCardType] = useState("");
 
   const [password, setPassword] = useState("");
@@ -37,7 +38,6 @@ const ScoreLogin = () => {
 
   const pwdRefs = [useRef(), useRef(), useRef(), useRef(), useRef()];
 
-  // 빠진 데이터를 체크하는 함수 추가
   const checkMissingData = () => {
     const missing = [];
     if (!location?.state?.currentStageInfo) missing.push("무대 정보");
@@ -50,29 +50,30 @@ const ScoreLogin = () => {
 
   const handleInputs = (index, value) => {
     if (value.length > 1) {
-      return; // 입력의 길이가 1을 초과하면 아무 것도 하지 않음
+      return;
     }
 
     setPasswordInputs((prevState) =>
       prevState.map((input, i) => (i === index ? value : input))
     );
 
-    // 입력 값이 존재하면 다음 입력 칸으로 focus 이동
     if (value) {
-      if (index < pwdRefs.length - 1) {
+      if (index < pwdRefs.length - 1 && pwdRefs[index + 1].current) {
         pwdRefs[index + 1].current.focus();
       }
     } else {
-      // 입력 값이 없으면 이전 입력 칸으로 focus 이동
-      if (index > 0) {
+      if (index > 0 && pwdRefs[index - 1].current) {
         pwdRefs[index - 1].current.focus();
       }
     }
 
-    // 모든 입력 칸에 값이 채워졌을 때 심사진행 버튼으로 focus 이동
     if (passwordInputs.join("").length === 4) {
-      pwdRefs[pwdRefs.length - 1].current.blur(); // 마지막 입력 칸에서 focus 해제
-      pwdRefs[4].current.focus(); // 심사진행 버튼으로 focus 이동
+      if (pwdRefs[pwdRefs.length - 1].current) {
+        pwdRefs[pwdRefs.length - 1].current.blur();
+      }
+      if (pwdRefs[4]?.current) {
+        pwdRefs[4].current.focus();
+      }
     }
   };
 
@@ -83,7 +84,6 @@ const ScoreLogin = () => {
       }
     }
 
-    // 엔터키를 누르면 심사진행 버튼 클릭과 동일한 동작을 처리
     if (e.key === "Enter" && index === pwdRefs.length - 2) {
       handleJudgeLogin(
         "currentStage",
@@ -120,7 +120,6 @@ const ScoreLogin = () => {
     }
   };
 
-  //로그인시에 location.state에 currentStageInfo를 담아서 넘겨야한다.
   const handleJudgeLogin = async (collectionName, documentId, seatIndex) => {
     await handleUpdateState(
       `${collectionName}/${documentId}/judges/${seatIndex - 1}`,
@@ -165,7 +164,7 @@ const ScoreLogin = () => {
   }, []);
 
   useEffect(() => {
-    checkMissingData(); // 빠진 데이터 체크
+    checkMissingData();
     console.log(checkMissingData());
     console.log(location);
     realtimeData?.categoryTitle && setIsLoading(false);
@@ -174,11 +173,12 @@ const ScoreLogin = () => {
   useEffect(() => {
     if (
       realtimeData &&
+      location?.state?.currentStageInfo[0].stageId !== undefined &&
       realtimeData?.stageId !== location?.state?.currentStageInfo[0].stageId
     ) {
       navigate("/lobby", { replace: true });
     }
-  }, [realtimeData?.stageId]);
+  }, [realtimeData, location.state.currentStageInfo]);
 
   return (
     <>
@@ -188,7 +188,7 @@ const ScoreLogin = () => {
         </div>
       )}
       {!isLoading && (
-        <div className="flex w-full h-full flex-col">
+        <div className="flex w-full min-h-screen flex-col bg-white p-8">
           <ConfirmationModal
             isOpen={msgOpen}
             message={message}
@@ -196,85 +196,108 @@ const ScoreLogin = () => {
             onConfirm={() => setMsgOpen(false)}
           />
 
-          {/* 빠진 데이터가 있으면 경고 메시지 표시 */}
           {missingData.length > 0 && (
-            <div className="text-red-600 text-center font-bold mb-5">
-              {`누락된 데이터: ${missingData.join(", ")}`}
-            </div>
+            <Alert
+              message="누락된 데이터"
+              description={`누락된 데이터: ${missingData.join(", ")}`}
+              type="error"
+              showIcon
+              className="mb-6"
+            />
           )}
 
-          {/* 되돌아가기 버튼 추가 */}
-          <div className="flex justify-center mb-5">
-            <button
-              className="w-44 h-12 border text-gray-800 text-base font-semibold rounded-lg"
+          <div className="flex justify-center mb-8">
+            <Button
+              icon={<ArrowLeftOutlined />}
+              size="large"
               onClick={() => navigate("/lobby")}
+              className="min-w-[180px]"
             >
               되돌아가기
-            </button>
+            </Button>
           </div>
 
-          <div className="flex w-full justify-center items-center h-20">
-            <span className="text-6xl font-sans font-bold text-gray-800">
-              JUDGE
-            </span>
-            <span className="text-6xl font-sans font-bold text-gray-800 ml-2">
-              {machineId}
-            </span>
-          </div>
-
-          <div className="flex text-2xl font-bold text-blue-900 h-auto w-full justify-center items-center p-5">
-            {realtimeData?.categoryTitle} ({realtimeData?.gradeTitle})
-            {location?.state?.currentStageInfo[0].onedayPassword}
-          </div>
-
-          <div className="flex w-full justify-center items-center p-5 gap-x-5">
-            <div className="flex w-full justify-center items-center p-5 gap-x-5">
-              {passwordInputs.map((value, index) => (
-                <div
-                  key={index}
-                  className="flex justify-center items-center w-32 h-32 border-8 border-orange-400 rounded-md"
-                >
-                  <input
-                    type="number"
-                    ref={pwdRefs[index]}
-                    onFocus={(e) => e.target.select()}
-                    onKeyDown={(e) =>
-                      handleKeyDown(index, pwdRefs[index - 1], e)
-                    }
-                    onChange={(e) => handleInputs(index, e.target.value)}
-                    value={value}
-                    name={`judgePassword${index + 1}`}
-                    maxLength={1}
-                    className="w-28 h-28 text-6xl flex text-center align-middle outline-none"
-                  />
+          <div className="flex flex-col items-center justify-center mb-8">
+            <Card
+              className="text-center shadow-2xl border-0"
+              style={{
+                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              }}
+            >
+              <Space direction="vertical" size="large" className="w-full">
+                <div className="flex flex-col items-center justify-center gap-2">
+                  <span className="text-white text-4xl md:text-5xl font-light tracking-wider">
+                    JUDGE
+                  </span>
+                  <span className="text-white text-8xl md:text-9xl font-bold tracking-tight">
+                    {machineId}
+                  </span>
                 </div>
-              ))}
-              <div className="flex w-auto h-auto p-3 justify-start items-center">
-                {passwordInputs.join("") ===
-                location?.state?.currentStageInfo[0].onedayPassword ? (
-                  <button
-                    className="w-32 h-32 bg-blue-500 text-white text-2xl font-semibold rounded-lg"
-                    ref={pwdRefs[4]}
-                    onClick={() =>
-                      handleJudgeLogin(
-                        "currentStage",
-                        contestInfo.id,
-                        location.state.currentJudgeInfo.seatIndex
-                      )
-                    }
-                  >
-                    심사진행
-                  </button>
-                ) : (
-                  <button
-                    className="w-44 h-24 bg-blue-500 text-white text-2xl font-semibold rounded-lg hidden"
-                    ref={pwdRefs[4]}
-                  >
-                    심사진행
-                  </button>
+                {realtimeData !== null && (
+                  <div className="pt-4 border-t border-white/30">
+                    <span className="text-white text-2xl md:text-3xl font-medium">
+                      {realtimeData?.categoryTitle} ({realtimeData?.gradeTitle})
+                    </span>
+                    <div className="text-white text-lg font-medium opacity-70 mt-2">
+                      비밀번호:{" "}
+                      {location?.state?.currentStageInfo[0].onedayPassword}
+                    </div>
+                  </div>
                 )}
-              </div>
+              </Space>
+            </Card>
+          </div>
+
+          <div className="flex flex-col items-center justify-center gap-8">
+            <div className="text-2xl font-semibold text-gray-700 mb-4">
+              비밀번호를 입력하세요
             </div>
+
+            <div className="flex gap-4 items-center">
+              {passwordInputs.map((value, index) => (
+                <Input
+                  key={index}
+                  ref={pwdRefs[index]}
+                  type="number"
+                  maxLength={1}
+                  value={value}
+                  onFocus={(e) => e.target.select()}
+                  onKeyDown={(e) => handleKeyDown(index, pwdRefs[index - 1], e)}
+                  onChange={(e) => handleInputs(index, e.target.value)}
+                  className="w-24 h-24 text-center text-5xl font-bold"
+                  style={{
+                    fontSize: "3rem",
+                    fontWeight: "bold",
+                    textAlign: "center",
+                  }}
+                />
+              ))}
+            </div>
+
+            {passwordInputs.join("") ===
+              location?.state?.currentStageInfo[0].onedayPassword && (
+              <Button
+                ref={pwdRefs[4]}
+                type="primary"
+                size="large"
+                icon={<LoginOutlined />}
+                onClick={() =>
+                  handleJudgeLogin(
+                    "currentStage",
+                    contestInfo.id,
+                    location.state.currentJudgeInfo.seatIndex
+                  )
+                }
+                className="min-w-[200px] h-16 text-2xl font-semibold"
+                style={{
+                  background:
+                    "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                  border: "none",
+                }}
+              >
+                심사진행
+              </Button>
+            )}
           </div>
         </div>
       )}

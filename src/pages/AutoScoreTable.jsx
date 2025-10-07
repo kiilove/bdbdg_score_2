@@ -30,6 +30,8 @@ const AutoScoreTable = () => {
   const navigate = useNavigate();
 
   const [isLoading, setIsLoading] = useState(true);
+  const [signatureLoading, setSignatureLoading] = useState(true);
+
   const [contestInfo, setContestInfo] = useState({});
   const [currentJudgeInfo, setCurrentJudgeInfo] = useState({});
   const [topPlayersArray, setTopPlayersArray] = useState([]);
@@ -371,28 +373,64 @@ const AutoScoreTable = () => {
 
   const handleUpdateJudgeMessage = async (contestId, seatIndex) => {
     try {
-      await updateRealTimeJudgeMessage
-        .updateData(
-          `currentStage/${contestId}/compares/judges/${
-            seatIndex - 1
-          }/messageStatus`,
-          "투표중"
-        )
-        .then(() =>
-          navigate("/comparevote", {
-            replace: true,
-            state: {
-              currentStageInfo,
-              currentJudgeInfo,
-              contestInfo,
-              compareInfo: { ...realtimeData },
-            },
-          })
-        );
+      console.log("🔥 [AutoScore] realtimeData:", realtimeData);
+
+      let prevTop = [];
+
+      // ✅ compareIndex가 2 이상이면 현재 compares.players를 그대로 이전차수 명단으로 사용
+      const compareIndex = realtimeData?.compareIndex;
+      if (compareIndex && compareIndex > 1) {
+        prevTop = [...(realtimeData?.players || [])];
+      }
+
+      console.log("🔥 [AutoScore] prevTop:", prevTop);
+
+      await updateRealTimeJudgeMessage.updateData(
+        `currentStage/${contestId}/compares/judges/${
+          seatIndex - 1
+        }/messageStatus`,
+        "투표중"
+      );
+
+      navigate("/comparevote", {
+        replace: true,
+        state: {
+          currentStageInfo,
+          currentJudgeInfo,
+          contestInfo,
+          compareInfo: { ...realtimeData },
+          propSubPlayers: prevTop, // ✅ 이전 차수 players 전달
+        },
+      });
     } catch (error) {
-      console.log(error);
+      console.error("handleUpdateJudgeMessage error:", error);
     }
   };
+
+  // const handleUpdateJudgeMessage = async (contestId, seatIndex) => {
+  //   try {
+  //     await updateRealTimeJudgeMessage
+  //       .updateData(
+  //         `currentStage/${contestId}/compares/judges/${
+  //           seatIndex - 1
+  //         }/messageStatus`,
+  //         "투표중"
+  //       )
+  //       .then(() =>
+  //         navigate("/comparevote", {
+  //           replace: true,
+  //           state: {
+  //             currentStageInfo,
+  //             currentJudgeInfo,
+  //             contestInfo,
+  //             compareInfo: { ...realtimeData },
+  //           },
+  //         })
+  //       );
+  //   } catch (error) {
+  //     console.log(error);
+  //   }
+  // };
 
   useEffect(() => {
     //console.log(currentStageInfo);
@@ -464,19 +502,28 @@ const AutoScoreTable = () => {
   }, [realtimeData?.status]);
 
   useEffect(() => {
-    console.log(realtimeData);
+    // 🔥 타이머 시작
+    const timer = setTimeout(() => {
+      console.log("⏳ 3초 경과 — 서명을 못 불러와서 로딩 종료");
+      setSignatureLoading(false);
+    }, 3000);
+
+    // ✅ judgeSignature 가 오면 즉시 로딩 해제 & 타이머 중단
+    if (currentStageInfo?.[0]?.judgeSignature) {
+      console.log("✅ 서명 데이터 도착");
+      setSignatureLoading(false);
+      clearTimeout(timer);
+    }
+
+    // 🔥 언마운트나 currentStageInfo 변경 시 타이머 정리
+    return () => clearTimeout(timer);
+  }, [currentStageInfo]);
+
+  useEffect(() => {
     if (realtimeData?.status?.compareStart) {
       handleComparePopup();
     }
   }, [realtimeData?.status?.compareStart]);
-
-  useEffect(() => {
-    console.log(location);
-  }, [location]);
-
-  useEffect(() => {
-    console.log(realtimeData);
-  }, [realtimeData]);
 
   return (
     <>
@@ -552,11 +599,17 @@ const AutoScoreTable = () => {
                 </div>
               </div>
               <div className="flex w-1/3 justify-center">
-                <img
-                  src={currentContest?.contestInfo?.contestOrgLogo}
-                  alt=""
-                  className="w-36"
-                />
+                <button
+                  onClick={() => {
+                    navigate("/lobby");
+                  }}
+                >
+                  <img
+                    src={currentContest?.contestInfo?.contestOrgLogo}
+                    alt=""
+                    className="w-36"
+                  />
+                </button>
               </div>
               <div className="flex w-1/3 items-end flex-col">
                 <div className="flex w-32 h-auto py-2 justify-center items-center text-lg">
@@ -880,31 +933,36 @@ const AutoScoreTable = () => {
                         서명
                       </div>
                       <div className="flex w-5/6 justify-center items-center h-20 ">
-                        {currentJudgeInfo &&
-                          (currentStageInfo[0].judgeSignature ? (
-                            // <CanvasWithImageData
-                            //   imageData={currentStageInfo[0].judgeSignature}
-                            // />
-                            <div
-                              className="flex w-full justify-center items-center"
-                              style={{ height: "150px" }}
-                            >
-                              <img
-                                src={currentStageInfo[0].judgeSignature}
-                                alt="서명"
-                                style={{ width: "150px", height: "100px" }}
-                              />
-                            </div>
-                          ) : (
-                            <div className="flex flex-col">
-                              <span style={{ fontSize: 12 }}>
-                                사인을 불러오지 못했지만
-                              </span>
-                              <span style={{ fontSize: 12 }}>
-                                심사에는 지장이 없습니다.
-                              </span>
-                            </div>
-                          ))}
+                        {signatureLoading ? (
+                          <div className="flex flex-col justify-center items-center">
+                            <span style={{ fontSize: 14, color: "#555" }}>
+                              서명 불러오는 중...
+                            </span>
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mt-2"></div>
+                          </div>
+                        ) : currentStageInfo?.[0]?.judgeSignature ? (
+                          <div
+                            className="flex w-full justify-center items-center"
+                            style={{ height: "150px" }}
+                          >
+                            <img
+                              src={currentStageInfo[0].judgeSignature}
+                              alt="서명"
+                              style={{ width: "150px", height: "100px" }}
+                              onLoad={() => setSignatureLoading(false)}
+                              onError={() => setSignatureLoading(false)}
+                            />
+                          </div>
+                        ) : (
+                          <div className="flex flex-col">
+                            <span style={{ fontSize: 12 }}>
+                              사인을 불러오지 못했지만
+                            </span>
+                            <span style={{ fontSize: 12 }}>
+                              심사에는 지장이 없습니다.
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
