@@ -9,7 +9,7 @@ import {
 import { handleMachineCheck } from "../functions/functions";
 import ConfirmationModal from "../messageBox/ConfirmationModal";
 import LoadingPage from "./LoadingPage";
-import { Button, Input, Alert, Card, Space } from "antd";
+import { Button, Input, Alert, Card, Space, Divider } from "antd";
 import { ArrowLeftOutlined, LoginOutlined } from "@ant-design/icons";
 
 const ScoreLogin = () => {
@@ -26,6 +26,10 @@ const ScoreLogin = () => {
 
   const [password, setPassword] = useState("");
   const [passwordInputs, setPasswordInputs] = useState(["", "", "", ""]);
+
+  const [isLandscape, setIsLandscape] = useState(
+    typeof window !== "undefined" && window.innerWidth > window.innerHeight
+  );
 
   const {
     data: realtimeData,
@@ -180,6 +184,14 @@ const ScoreLogin = () => {
     }
   }, [realtimeData, location.state.currentStageInfo]);
 
+  useEffect(() => {
+    const handleResize = () => {
+      setIsLandscape(window.innerWidth > window.innerHeight);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   return (
     <>
       {isLoading && (
@@ -188,7 +200,7 @@ const ScoreLogin = () => {
         </div>
       )}
       {!isLoading && (
-        <div className="flex w-full min-h-screen flex-col bg-white p-8">
+        <div className="flex w-full h-screen flex-col bg-white p-2">
           <ConfirmationModal
             isOpen={msgOpen}
             message={message}
@@ -202,102 +214,240 @@ const ScoreLogin = () => {
               description={`누락된 데이터: ${missingData.join(", ")}`}
               type="error"
               showIcon
-              className="mb-6"
+              className="mb-2"
             />
           )}
 
-          <div className="flex justify-center mb-8">
+          <div className="flex justify-center mb-2 flex-shrink-0">
             <Button
               icon={<ArrowLeftOutlined />}
-              size="large"
+              size="small"
               onClick={() => navigate("/lobby")}
-              className="min-w-[180px]"
+              className="min-w-[100px]"
             >
               되돌아가기
             </Button>
           </div>
 
-          <div className="flex flex-col items-center justify-center mb-8">
+          <div className="flex-1 flex items-center justify-center px-4">
             <Card
-              className="text-center shadow-2xl border-0"
-              style={{
+              className={`shadow-2xl border-0 w-full ${
+                isLandscape
+                  ? "max-w-6xl max-h-[50vh]"
+                  : "max-w-2xl max-h-[50vh]"
+              }`}
+              bodyStyle={{
+                padding: 0,
+                height: "100%",
                 background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
               }}
             >
-              <Space direction="vertical" size="large" className="w-full">
-                <div className="flex flex-col items-center justify-center gap-2">
-                  <span className="text-white text-4xl md:text-5xl font-light tracking-wider">
-                    JUDGE
-                  </span>
-                  <span className="text-white text-8xl md:text-9xl font-bold tracking-tight">
-                    {machineId}
-                  </span>
-                </div>
-                {realtimeData !== null && (
-                  <div className="pt-4 border-t border-white/30">
-                    <span className="text-white text-2xl md:text-3xl font-medium">
-                      {realtimeData?.categoryTitle} ({realtimeData?.gradeTitle})
-                    </span>
-                    <div className="text-white text-lg font-medium opacity-70 mt-2">
-                      비밀번호:{" "}
-                      {location?.state?.currentStageInfo[0].onedayPassword}
+              <div
+                className={`flex h-full ${
+                  isLandscape ? "flex-row" : "flex-col"
+                }`}
+              >
+                {/* JUDGE 정보 영역 */}
+                <div
+                  className={`flex items-center justify-center ${
+                    isLandscape ? "flex-1 p-8" : "flex-shrink-0 p-6"
+                  }`}
+                >
+                  {isLandscape ? (
+                    <Space
+                      direction="vertical"
+                      size="large"
+                      className="w-full text-center"
+                    >
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        <span className="text-white text-4xl font-light tracking-wider">
+                          JUDGE
+                        </span>
+                        <span className="text-white text-8xl font-bold tracking-tight">
+                          {machineId}
+                        </span>
+                      </div>
+                      {realtimeData !== null && (
+                        <div className="pt-4 border-t border-white/30">
+                          <div className="text-white text-2xl font-medium mb-2">
+                            {realtimeData?.categoryTitle} (
+                            {realtimeData?.gradeTitle})
+                          </div>
+                          <div className="text-white text-lg font-medium opacity-70">
+                            비밀번호:{" "}
+                            {
+                              location?.state?.currentStageInfo[0]
+                                .onedayPassword
+                            }
+                          </div>
+                        </div>
+                      )}
+                    </Space>
+                  ) : (
+                    <div className="flex flex-col items-center gap-2 text-center">
+                      <div className="flex items-center gap-3">
+                        <span className="text-white text-3xl font-light tracking-wider">
+                          JUDGE
+                        </span>
+                        <span className="text-white text-6xl font-bold tracking-tight">
+                          {machineId}
+                        </span>
+                      </div>
+                      {realtimeData !== null && (
+                        <div className="flex flex-col items-center gap-1">
+                          <span className="text-white text-lg font-medium">
+                            {realtimeData?.categoryTitle} (
+                            {realtimeData?.gradeTitle})
+                          </span>
+                          <span className="text-white text-base font-medium opacity-70">
+                            비밀번호:{" "}
+                            {
+                              location?.state?.currentStageInfo[0]
+                                .onedayPassword
+                            }
+                          </span>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                )}
-              </Space>
-            </Card>
-          </div>
+                  )}
+                </div>
 
-          <div className="flex flex-col items-center justify-center gap-8">
-            <div className="text-2xl font-semibold text-gray-700 mb-4">
-              비밀번호를 입력하세요
-            </div>
-
-            <div className="flex gap-4 items-center">
-              {passwordInputs.map((value, index) => (
-                <Input
-                  key={index}
-                  ref={pwdRefs[index]}
-                  type="number"
-                  maxLength={1}
-                  value={value}
-                  onFocus={(e) => e.target.select()}
-                  onKeyDown={(e) => handleKeyDown(index, pwdRefs[index - 1], e)}
-                  onChange={(e) => handleInputs(index, e.target.value)}
-                  className="w-24 h-24 text-center text-5xl font-bold"
+                <Divider
+                  type={isLandscape ? "vertical" : "horizontal"}
                   style={{
-                    fontSize: "3rem",
-                    fontWeight: "bold",
-                    textAlign: "center",
+                    borderColor: "rgba(255, 255, 255, 0.3)",
+                    margin: 0,
+                    height: isLandscape ? "auto" : "1px",
                   }}
                 />
-              ))}
-            </div>
 
-            {passwordInputs.join("") ===
-              location?.state?.currentStageInfo[0].onedayPassword && (
-              <Button
-                ref={pwdRefs[4]}
-                type="primary"
-                size="large"
-                icon={<LoginOutlined />}
-                onClick={() =>
-                  handleJudgeLogin(
-                    "currentStage",
-                    contestInfo.id,
-                    location.state.currentJudgeInfo.seatIndex
-                  )
-                }
-                className="min-w-[200px] h-16 text-2xl font-semibold"
-                style={{
-                  background:
-                    "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                  border: "none",
-                }}
-              >
-                심사진행
-              </Button>
-            )}
+                {/* 비밀번호 입력 영역 */}
+                <div
+                  className={`flex bg-white ${
+                    isLandscape ? "flex-1 flex-col" : "flex-1 p-6"
+                  }`}
+                >
+                  {isLandscape ? (
+                    <>
+                      <div className="flex-1 flex flex-col items-center justify-center gap-8 p-8">
+                        <div className="flex flex-col items-center gap-4">
+                          <div className="font-semibold text-gray-700 text-lg">
+                            비밀번호를 입력하세요
+                          </div>
+
+                          <div className="flex gap-2 items-center">
+                            {passwordInputs.map((value, index) => (
+                              <Input
+                                key={index}
+                                ref={pwdRefs[index]}
+                                type="number"
+                                maxLength={1}
+                                value={value}
+                                onFocus={(e) => e.target.select()}
+                                onKeyDown={(e) =>
+                                  handleKeyDown(index, pwdRefs[index - 1], e)
+                                }
+                                onChange={(e) =>
+                                  handleInputs(index, e.target.value)
+                                }
+                                className="w-20 h-20"
+                                style={{
+                                  fontSize: "2.5rem",
+                                  fontWeight: "bold",
+                                  textAlign: "center",
+                                }}
+                              />
+                            ))}
+                          </div>
+                        </div>
+
+                        {passwordInputs.join("") ===
+                          location?.state?.currentStageInfo[0]
+                            .onedayPassword && (
+                          <Button
+                            ref={pwdRefs[4]}
+                            type="primary"
+                            size="large"
+                            icon={<LoginOutlined />}
+                            onClick={() =>
+                              handleJudgeLogin(
+                                "currentStage",
+                                contestInfo.id,
+                                location.state.currentJudgeInfo.seatIndex
+                              )
+                            }
+                            className="font-semibold min-w-[200px] h-14 text-xl"
+                            style={{
+                              background:
+                                "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                              border: "none",
+                            }}
+                          >
+                            심사진행
+                          </Button>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center gap-4 w-full">
+                      <div className="font-semibold text-gray-700 text-lg">
+                        비밀번호를 입력하세요
+                      </div>
+
+                      <div className="flex gap-2 items-center">
+                        {passwordInputs.map((value, index) => (
+                          <Input
+                            key={index}
+                            ref={pwdRefs[index]}
+                            type="number"
+                            maxLength={1}
+                            value={value}
+                            onFocus={(e) => e.target.select()}
+                            onKeyDown={(e) =>
+                              handleKeyDown(index, pwdRefs[index - 1], e)
+                            }
+                            onChange={(e) =>
+                              handleInputs(index, e.target.value)
+                            }
+                            className="w-16 h-16"
+                            style={{
+                              fontSize: "2rem",
+                              fontWeight: "bold",
+                              textAlign: "center",
+                            }}
+                          />
+                        ))}
+                      </div>
+
+                      {passwordInputs.join("") ===
+                        location?.state?.currentStageInfo[0].onedayPassword && (
+                        <Button
+                          ref={pwdRefs[4]}
+                          type="primary"
+                          size="large"
+                          icon={<LoginOutlined />}
+                          onClick={() =>
+                            handleJudgeLogin(
+                              "currentStage",
+                              contestInfo.id,
+                              location.state.currentJudgeInfo.seatIndex
+                            )
+                          }
+                          className="font-semibold min-w-[160px] h-12 text-lg"
+                          style={{
+                            background:
+                              "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                            border: "none",
+                          }}
+                        >
+                          심사진행
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </Card>
           </div>
         </div>
       )}

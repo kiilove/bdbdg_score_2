@@ -1,17 +1,13 @@
-import React, { useContext, useEffect, useState } from "react";
+"use client";
+
+import { useContext, useEffect, useState } from "react";
 import LoadingPage from "./LoadingPage";
 import { useLocation, useNavigate } from "react-router-dom";
 import ConfirmationModal from "../messageBox/ConfirmationModal";
-import {
-  useFirebaseRealtimeGetDocument,
-  useFirebaseRealtimeUpdateData,
-} from "../hooks/useFirebaseRealtime";
+import { useFirebaseRealtimeUpdateData } from "../hooks/useFirebaseRealtime";
 import { CurrentContestContext } from "../contexts/CurrentContestContext";
-import {
-  useFirestoreGetDocument,
-  useFirestoreUpdateData,
-} from "../hooks/useFirestores";
-import { AiFillCheckCircle } from "react-icons/ai";
+import { Card, Button, Space, Badge } from "antd";
+import { CheckCircleFilled } from "@ant-design/icons";
 
 const CompareVote = () => {
   const location = useLocation();
@@ -34,13 +30,6 @@ const CompareVote = () => {
 
   const { currentContest } = useContext(CurrentContestContext);
 
-  // 실시간 데이터 가져오기 (필요하다면 추가)
-  // const { data: realtimeData } = useFirebaseRealtimeGetDocument(
-  //   currentContest?.contests?.id
-  //     ? `currentStage/${currentContest.contests.id}`
-  //     : null
-  // );
-
   const handleUpdateVote = async (contestId, seatIndex, votedPlayerNumber) => {
     try {
       await updateRealtime.updateData(
@@ -53,7 +42,12 @@ const CompareVote = () => {
 
       await updateRealtime.updateData(
         `currentStage/${contestId}/judges/${seatIndex - 1}`,
-        { errors: "", isEnd: false, isLogined: true, seatIndex }
+        {
+          errors: "",
+          isEnd: false,
+          isLogined: true,
+          seatIndex,
+        }
       );
 
       setMessage({
@@ -175,7 +169,7 @@ const CompareVote = () => {
           <LoadingPage />
         </div>
       ) : (
-        <div className="flex w-full h-full flex-col bg-white justify-start items-center p-5 gap-y-2">
+        <div className="flex w-full h-screen flex-col bg-gray-50 overflow-hidden">
           <ConfirmationModal
             isOpen={msgOpen}
             message={message}
@@ -189,46 +183,63 @@ const CompareVote = () => {
             onConfirm={handleNavigateLobby}
           />
 
-          {/* 상단 정보 */}
-          <div className="flex text-xl font-bold bg-blue-300 rounded-lg w-full h-auto justify-center items-center text-gray-700 flex-col p-2 gap-y-2">
-            <div className="flex w-full bg-blue-100 rounded-lg py-3 flex-col">
-              <div className="flex w-full h-auto justify-center items-center">
-                <span>
-                  {stageInfo[0]?.categoryTitle}({stageInfo[0]?.gradeTitle})
-                </span>
-                <span className="pl-5 pr-2">
-                  {compareInfo.compareIndex || 1}차
-                </span>
-                <span> 비교심사 투표</span>
-              </div>
-              <div className="flex w-full h-auto justify-center items-center text-3xl font-extrabold">
-                {compareInfo.playerLength}명을 선택해주세요
-              </div>
-            </div>
-            {/* 투표한 인원수 및 목록 */}
-            <div className="flex w-full h-auto justify-center items-start flex-col text-base font-normal">
-              <div className="flex flex-col w-full h-auto p-2 bg-blue-100 rounded-lg">
-                <div className="flex w-full justify-start items-center">
-                  <span>투표한 인원수 : {judgeVoted.length || 0}명</span>
-                  <span className="mx-3"> / </span>
-                  <span>
-                    남은 인원수 : {compareInfo.playerLength - judgeVoted.length}
-                    명
+          {/* 상단 정보 카드 */}
+          <div className="flex-shrink-0 p-2">
+            <Card className="shadow-lg">
+              <Space direction="vertical" size={6} className="w-full">
+                {/* 종목 및 차수 정보 */}
+                <div className="flex items-center justify-center gap-2 md:gap-4 text-center">
+                  <span className="text-base md:text-lg font-semibold text-gray-700">
+                    {stageInfo[0]?.categoryTitle}({stageInfo[0]?.gradeTitle})
+                  </span>
+                  <span className="text-gray-400">|</span>
+                  <span className="text-sm md:text-base font-medium text-gray-600">
+                    {compareInfo.compareIndex || 1}차 비교심사 투표
                   </span>
                 </div>
-                <div className="flex w-full h-auto p-2 justify-start items-center">
-                  {judgeVoted.length > 0 ? (
-                    <div className="flex w-5/6 h-auto flex-wrap">
-                      {judgeVoted.map((voted) => (
-                        <div
-                          key={voted.playerNumber}
-                          className="flex w-auto h-auto p-2 flex-col gap-y-2"
-                        >
-                          <div className="flex w-20 h-20 rounded-lg bg-blue-500 justify-center items-center font-semibold border-2 border-blue-800 text-4xl text-gray-100">
-                            {voted.playerNumber}
-                          </div>
-                          <button
-                            className="flex w-20 h-auto justify-center items-center bg-red-500 rounded-lg border-2 border-red-600 text-white text-sm"
+
+                {/* 선택 인원수 강조 */}
+                <div
+                  className="text-center py-4 rounded-lg"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                  }}
+                >
+                  <div className="text-white text-lg md:text-xl font-bold">
+                    {compareInfo.playerLength}명을 선택해주세요
+                  </div>
+                </div>
+
+                {/* 투표 현황 */}
+                <Card
+                  className="bg-gray-50"
+                  bodyStyle={{ padding: "6px 10px" }}
+                >
+                  <Space direction="vertical" size={4} className="w-full">
+                    <div className="flex flex-wrap gap-2 text-xs md:text-sm">
+                      <span className="font-semibold">
+                        투표:{" "}
+                        <span className="text-blue-600">
+                          {judgeVoted.length || 0}
+                        </span>
+                      </span>
+                      <span className="text-gray-400">/</span>
+                      <span className="font-semibold">
+                        남은:{" "}
+                        <span className="text-orange-600">
+                          {compareInfo.playerLength - judgeVoted.length}
+                        </span>
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 min-h-[72px] items-start">
+                      {judgeVoted.length > 0 ? (
+                        judgeVoted.map((voted) => (
+                          <Badge
+                            key={voted.playerNumber}
+                            count={voted.playerNumber}
+                            overflowCount={9999}
                             onClick={() =>
                               handleUnVotedPlayers(
                                 voted.playerUid,
@@ -238,114 +249,143 @@ const CompareVote = () => {
                                   : "original"
                               )
                             }
-                          >
-                            취소
-                          </button>
+                            style={{
+                              backgroundColor: "#1890ff",
+                              fontSize: "18px",
+                              fontWeight: "bold",
+                              width: "66px",
+                              height: "66px",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              cursor: "pointer",
+                              transition: "all 0.2s",
+                            }}
+                            className="hover:opacity-80"
+                          />
+                        ))
+                      ) : (
+                        <div className="w-full text-center text-gray-500 py-1 text-xs">
+                          선수번호를 터치해주세요.
                         </div>
-                      ))}
+                      )}
                     </div>
-                  ) : (
-                    <div className="flex w-full h-auto flex-wrap">
-                      <div className="flex w-full h-auto p-2 flex-col gap-y-2 text-lg justify-center items-center">
-                        선수목록에서 선수번호를 터치해주세요.
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
+                  </Space>
+                </Card>
+              </Space>
+            </Card>
           </div>
 
           {/* 투표 대상 선수 목록 */}
-          {compareInfo.voteRange === "voted" ? (
-            <div className="flex w-full h-auto p-2 bg-blue-400 rounded-lg flex-col gap-y-2">
-              <div className="flex bg-blue-100 w-full h-auto p-2 rounded-lg">
-                {compareInfo.compareIndex - 1}차 비교심사 명단
-              </div>
-              <div className="flex bg-gray-100 w-full h-auto p-2 rounded-lg gap-2 flex-wrap">
-                {subPlayers.map((player) => (
-                  <button
-                    key={player.playerNumber}
-                    className={`flex w-20 h-20 rounded-lg ${
-                      player.selected ? "bg-green-500" : "bg-white"
-                    } justify-center items-center font-semibold border-2 border-gray-400 text-4xl`}
-                    onClick={() =>
-                      player.selected
-                        ? handleUnVotedPlayers(
-                            player.playerUid,
-                            player.playerNumber,
-                            "sub"
-                          )
-                        : handleVotedPlayers(
-                            player.playerUid,
-                            player.playerNumber,
-                            "sub"
-                          )
-                    }
-                  >
-                    {player.selected ? (
-                      <AiFillCheckCircle />
-                    ) : (
-                      player.playerNumber
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="flex w-full h-auto p-2 bg-gray-400 rounded-lg flex-col gap-y-2">
-              <div className="flex bg-gray-100 w-full h-auto p-2 rounded-lg">
-                전체 선수명단
-              </div>
-              <div className="flex bg-gray-100 w-full h-auto p-2 rounded-lg gap-2 flex-wrap">
-                {originalPlayers.map((player) => (
-                  <button
-                    key={player.playerNumber}
-                    className={`flex w-20 h-20 rounded-lg ${
-                      player.selected ? "bg-green-500" : "bg-white"
-                    } justify-center items-center font-semibold border-2 border-gray-400 text-4xl`}
-                    onClick={() =>
-                      player.selected
-                        ? handleUnVotedPlayers(
-                            player.playerUid,
-                            player.playerNumber,
-                            "original"
-                          )
-                        : handleVotedPlayers(
-                            player.playerUid,
-                            player.playerNumber,
-                            "original"
-                          )
-                    }
-                  >
-                    {player.selected ? (
-                      <AiFillCheckCircle />
-                    ) : (
-                      player.playerNumber
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* 투표 버튼 */}
-          {compareInfo.playerLength === judgeVoted.length && (
-            <div className="flex w-full h-auto">
-              <button
-                className="w-full h-14 rounded-lg bg-blue-500 text-gray-100 flex justify-center items-center text-2xl"
-                onClick={() =>
-                  handleUpdateVote(
-                    contestInfo.id,
-                    judgeInfo.seatIndex,
-                    judgeVoted
-                  )
-                }
+          <div className="flex-1 overflow-y-auto px-2">
+            {compareInfo.voteRange === "voted" ? (
+              <Card
+                title={`${compareInfo.compareIndex - 1}차 비교심사 명단`}
+                style={{
+                  header: {
+                    fontSize: "16px",
+                    fontWeight: "600",
+                    padding: "8px 16px",
+                    minHeight: "auto",
+                  },
+                }}
+                className="shadow-lg mb-2"
+                bodyStyle={{ padding: "8px" }}
               >
-                투표
-              </button>
-            </div>
-          )}
+                <div className="flex flex-wrap gap-1">
+                  {subPlayers.map((player) => (
+                    <Button
+                      key={player.playerNumber}
+                      type={player.selected ? "primary" : "default"}
+                      size="large"
+                      onClick={() =>
+                        player.selected
+                          ? handleUnVotedPlayers(
+                              player.playerUid,
+                              player.playerNumber,
+                              "sub"
+                            )
+                          : handleVotedPlayers(
+                              player.playerUid,
+                              player.playerNumber,
+                              "sub"
+                            )
+                      }
+                      className="w-16 h-16 min-w-[64px] text-xl font-bold flex-shrink-0"
+                      icon={player.selected ? <CheckCircleFilled /> : null}
+                    >
+                      {!player.selected && player.playerNumber}
+                    </Button>
+                  ))}
+                </div>
+              </Card>
+            ) : (
+              <Card
+                title="전체 선수명단"
+                style={{
+                  header: {
+                    fontSize: "16px",
+                    fontWeight: "600",
+                    padding: "8px 16px",
+                    minHeight: "auto",
+                  },
+                }}
+                className="shadow-lg mb-2"
+                bodyStyle={{ padding: "8px" }}
+              >
+                <div className="flex flex-wrap gap-1">
+                  {originalPlayers.map((player) => (
+                    <Button
+                      key={player.playerNumber}
+                      type={player.selected ? "primary" : "default"}
+                      size="large"
+                      onClick={() =>
+                        player.selected
+                          ? handleUnVotedPlayers(
+                              player.playerUid,
+                              player.playerNumber,
+                              "original"
+                            )
+                          : handleVotedPlayers(
+                              player.playerUid,
+                              player.playerNumber,
+                              "original"
+                            )
+                      }
+                      className="w-24 h-24 min-w-[96px] text-xl font-bold flex-shrink-0"
+                      icon={player.selected ? <CheckCircleFilled /> : null}
+                    >
+                      {!player.selected && player.playerNumber}
+                    </Button>
+                  ))}
+                </div>
+              </Card>
+            )}
+            {/* 투표 버튼 */}
+            {compareInfo.playerLength === judgeVoted.length && (
+              <div className="flex-shrink-0 p-2">
+                <Button
+                  type="primary"
+                  size="large"
+                  onClick={() =>
+                    handleUpdateVote(
+                      contestInfo.id,
+                      judgeInfo.seatIndex,
+                      judgeVoted
+                    )
+                  }
+                  className="w-full h-14 text-lg font-bold"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                    border: "none",
+                  }}
+                >
+                  투표
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </>

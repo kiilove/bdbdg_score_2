@@ -755,28 +755,6 @@ const JudgeLobby = () => {
           <CompareVote />
         </Modal>
 
-        {/* 상단 버튼 영역 */}
-        <div className="flex w-full justify-end items-center px-5 py-3 bg-white border-b gap-x-2">
-          <Button
-            icon={<FileTextOutlined />}
-            onClick={() => setShowLogs(!showLogs)}
-          >
-            {showLogs ? "로그 숨기기" : "로그 보기"}
-          </Button>
-          <Button
-            icon={<HomeOutlined />}
-            onClick={() => navigate("/lobby", { replace: true })}
-          >
-            대기화면 강제이동
-          </Button>
-          <Button
-            icon={<SettingOutlined />}
-            onClick={() => navigate("/setting", { replace: true })}
-          >
-            기기설정
-          </Button>
-        </div>
-
         {/* 메인 컨텐츠 영역 */}
         <div className="flex-1 flex flex-col justify-center items-center p-4 md:p-8">
           <Space direction="vertical" size="large" className="w-full max-w-4xl">
@@ -979,7 +957,7 @@ const JudgeLobby = () => {
 
             {/* 심판 정보 카드 */}
             {judgeDisplayInfo && (
-              <Collapse className="border-0 shadow-md">
+              <Collapse className="border-0 shadow-md" defaultActiveKey={["1"]}>
                 <Panel
                   header={
                     <Space>
@@ -1010,6 +988,38 @@ const JudgeLobby = () => {
                 </Panel>
               </Collapse>
             )}
+            <Collapse className="border-0 shadow-md mt-4">
+              <Panel
+                header={
+                  <Space>
+                    <SettingOutlined />
+                    <span>관리자 메뉴</span>
+                  </Space>
+                }
+                key="admin"
+              >
+                <Space direction="vertical" size="middle" className="w-full">
+                  <Button
+                    icon={<FileTextOutlined />}
+                    onClick={() => setShowLogs(!showLogs)}
+                  >
+                    {showLogs ? "로그 숨기기" : "로그 보기"}
+                  </Button>
+                  <Button
+                    icon={<HomeOutlined />}
+                    onClick={() => navigate("/lobby", { replace: true })}
+                  >
+                    대기화면 강제이동
+                  </Button>
+                  <Button
+                    icon={<SettingOutlined />}
+                    onClick={() => navigate("/setting", { replace: true })}
+                  >
+                    기기설정
+                  </Button>
+                </Space>
+              </Panel>
+            </Collapse>
 
             {/* 디버그 로그 */}
             {showLogs && (
