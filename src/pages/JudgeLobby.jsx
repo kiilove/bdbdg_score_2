@@ -641,7 +641,7 @@ const JudgeLobby = () => {
   }, [realtimeData?.stageId]);
 
   useEffect(() => {
-    console.log(currentJudgeAssign);
+    //console.log(currentJudgeAssign);
     if (
       machineId &&
       currentJudgeAssign?.length > 0 &&
