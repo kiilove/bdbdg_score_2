@@ -433,7 +433,7 @@ const AutoScoreTable = () => {
   // };
 
   useEffect(() => {
-    //console.log(currentStageInfo);
+    console.log(currentStageInfo);
     if (currentStageInfo && !realtimeData?.status.compareStart) {
       const hasUndefinedScoreOwner = currentStageInfo.some((stage) => {
         return (
