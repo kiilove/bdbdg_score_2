@@ -641,13 +641,16 @@ const JudgeLobby = () => {
   }, [realtimeData?.stageId]);
 
   useEffect(() => {
+    console.log(currentJudgeAssign);
     if (
       machineId &&
       currentJudgeAssign?.length > 0 &&
       judgePoolsArray.length > 0
     ) {
       const assignedJudge = currentJudgeAssign.find(
-        (j) => j.seatIndex === machineId
+        (j) =>
+          j.seatIndex === machineId &&
+          j.contestGradeId === realtimeData?.gradeId
       );
 
       if (assignedJudge) {
@@ -664,7 +667,7 @@ const JudgeLobby = () => {
         }
       }
     }
-  }, [machineId, currentJudgeAssign, judgePoolsArray]);
+  }, [machineId, currentJudgeAssign, judgePoolsArray, realtimeData]);
 
   useEffect(() => {
     console.log(contestInfo);
