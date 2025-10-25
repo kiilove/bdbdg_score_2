@@ -218,14 +218,14 @@ const CompareVote = () => {
                 >
                   <Space direction="vertical" size={4} className="w-full">
                     <div className="flex flex-wrap gap-2 text-xs md:text-sm">
-                      <span className="font-semibold">
+                      <span className="font-semibold text-lg">
                         투표:{" "}
                         <span className="text-blue-600">
                           {judgeVoted.length || 0}
                         </span>
                       </span>
                       <span className="text-gray-400">/</span>
-                      <span className="font-semibold">
+                      <span className="font-semibold text-lg">
                         남은:{" "}
                         <span className="text-orange-600">
                           {compareInfo.playerLength - judgeVoted.length}
@@ -311,7 +311,7 @@ const CompareVote = () => {
                               "sub"
                             )
                       }
-                      className="w-16 h-16 min-w-[64px] text-xl font-bold flex-shrink-0"
+                      className="w-16 h-16 min-w-[64px] text-3xl font-bold flex-shrink-0"
                       icon={player.selected ? <CheckCircleFilled /> : null}
                     >
                       {!player.selected && player.playerNumber}
@@ -352,8 +352,12 @@ const CompareVote = () => {
                               "original"
                             )
                       }
-                      className="w-24 h-24 min-w-[96px] text-xl font-bold flex-shrink-0"
-                      icon={player.selected ? <CheckCircleFilled /> : null}
+                      className="w-24 h-24 min-w-[96px] text-3xl font-bold flex-shrink-0"
+                      icon={
+                        player.selected ? (
+                          <CheckCircleFilled className="text-3xl" />
+                        ) : null
+                      }
                     >
                       {!player.selected && player.playerNumber}
                     </Button>
