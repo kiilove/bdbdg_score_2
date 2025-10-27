@@ -496,7 +496,12 @@ const JudgeLobby = () => {
     navigate("/setting");
     setMsgOpen(false);
   };
+  const injectSignature = (stageInfoArr, signature) =>
+    Array.isArray(stageInfoArr)
+      ? stageInfoArr.map((s) => ({ ...s, judgeSignature: signature }))
+      : stageInfoArr;
 
+  // 🔸 기존 함수를 이걸로 완전히 교체
   const handleNavigate = async ({ actionType }) => {
     console.log("handleNavigate called with actionType:", actionType);
     const collectionInfo = `currentStage/${contestInfo.id}/judges/${
@@ -507,68 +512,80 @@ const JudgeLobby = () => {
     console.log(currentJudgeInfo.seatIndex - 1);
     let prevTop = [];
 
+    // ✅ 로비에서 이미 불러온 서명 데이터
+    const sigFromLobby =
+      judgeDisplayInfo?.signature || currentJudgeInfo?.judgeSignature || null;
+
+    // ✅ 주입된 payload들 (다음 화면으로 넘길 때 사용)
+    const payloadJudgeInfo = {
+      ...currentJudgeInfo,
+      judgeSignature: sigFromLobby,
+    };
+    const payloadStageInfo = injectSignature(currentStageInfo, sigFromLobby);
+
     try {
       switch (actionType) {
-        case "login":
+        case "login": {
           console.log(
             "Navigating to login with currentStageInfo:",
             currentStageInfo
           );
           navigate("/scorelogin", {
             replace: true,
-            state: { currentStageInfo, currentJudgeInfo, contestInfo },
+            state: {
+              currentStageInfo: payloadStageInfo,
+              currentJudgeInfo: payloadJudgeInfo,
+              contestInfo,
+            },
           });
           break;
+        }
 
-        case "point":
+        case "point": {
           console.log(
             "Navigating to point table with currentStageInfo:",
             currentStageInfo
           );
-          await updateRealtimeData
-            .updateData(collectionInfo, {
-              isEnd: false,
-              isLogined: true,
-              seatIndex: currentJudgeInfo.seatIndex,
-            })
-            .then(() =>
-              navigate("/autopointtable", {
-                replace: true,
-                state: {
-                  currentStageInfo,
-                  currentJudgeInfo,
-                  contestInfo,
-                  compareInfo: { ...realtimeData?.compares },
-                },
-              })
-            );
+          await updateRealtimeData.updateData(collectionInfo, {
+            isEnd: false,
+            isLogined: true,
+            seatIndex: currentJudgeInfo.seatIndex,
+          });
+          navigate("/autopointtable", {
+            replace: true,
+            state: {
+              currentStageInfo: payloadStageInfo,
+              currentJudgeInfo: payloadJudgeInfo,
+              contestInfo,
+              compareInfo: { ...realtimeData?.compares },
+            },
+          });
           break;
+        }
 
-        case "ranking":
+        case "ranking": {
           console.log(
             "Navigating to score table with currentStageInfo:",
             currentStageInfo
           );
-          await updateRealtimeData
-            .updateData(collectionInfo, {
-              isEnd: false,
-              isLogined: true,
-              seatIndex: currentJudgeInfo.seatIndex,
-            })
-            .then(() =>
-              navigate("/autoscoretable", {
-                replace: true,
-                state: {
-                  currentStageInfo,
-                  currentJudgeInfo,
-                  contestInfo,
-                  compareInfo: { ...realtimeData?.compares },
-                },
-              })
-            );
+          await updateRealtimeData.updateData(collectionInfo, {
+            isEnd: false,
+            isLogined: true,
+            seatIndex: currentJudgeInfo.seatIndex,
+          });
+          navigate("/autoscoretable", {
+            replace: true,
+            state: {
+              currentStageInfo: payloadStageInfo,
+              currentJudgeInfo: payloadJudgeInfo,
+              contestInfo,
+              compareInfo: { ...realtimeData?.compares },
+            },
+          });
           break;
+        }
 
-        case "vote":
+        case "vote": {
           console.log(realtimeData?.compares?.compareIndex);
           console.log(
             "Navigating to vote, checking realtimeData compares:",
@@ -592,9 +609,7 @@ const JudgeLobby = () => {
           try {
             await updateRealtimeData
               .updateData(collectionInfoVote, "투표중")
-              .then((data, error) => {
-                console.log("error", error);
-                console.log("updated", data);
+              
                 navigate("/comparevote", {
                   replace: true,
                   state: {
@@ -602,7 +617,7 @@ const JudgeLobby = () => {
                     currentJudgeInfo,
                     contestInfo,
                     compareInfo: { ...realtimeData?.compares },
-                    propSubPlayers: prevTop,
+                    propSubPlayers: [...prevTop],
                   },
                 });
               });
@@ -610,6 +625,7 @@ const JudgeLobby = () => {
             console.error("Error during updateRealtimeData:", error);
           }
           break;
+        }
 
         default:
           console.log("Invalid actionType:", actionType);
@@ -638,13 +654,16 @@ const JudgeLobby = () => {
   }, [realtimeData?.stageId]);
 
   useEffect(() => {
+    //console.log(currentJudgeAssign);
     if (
       machineId &&
       currentJudgeAssign?.length > 0 &&
       judgePoolsArray.length > 0
     ) {
       const assignedJudge = currentJudgeAssign.find(
-        (j) => j.seatIndex === machineId
+        (j) =>
+          j.seatIndex === machineId &&
+          j.contestGradeId === realtimeData?.gradeId
       );
 
       if (assignedJudge) {
@@ -661,7 +680,7 @@ const JudgeLobby = () => {
         }
       }
     }
-  }, [machineId, currentJudgeAssign, judgePoolsArray]);
+  }, [machineId, currentJudgeAssign, judgePoolsArray, realtimeData]);
 
   useEffect(() => {
     console.log(contestInfo);
