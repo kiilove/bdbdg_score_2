@@ -575,16 +575,13 @@ const JudgeLobby = () => {
             realtimeData?.compares
           );
 
-          if (
-            currentComparesArray.length > 0 &&
-            currentComparesArray[currentComparesArray.length - 1]?.players
-          ) {
-            prevTop = [
-              ...currentComparesArray[currentComparesArray.length - 1].players,
-            ];
-          } else {
-            prevTop = [];
+          // ✅ compareIndex가 2 이상이면 현재 compares.players를 그대로 이전차수 명단으로 사용
+          const compareIndex = realtimeData?.compares.compareIndex;
+          if (compareIndex && compareIndex > 1) {
+            prevTop = [...(realtimeData?.compares?.players || [])];
           }
+
+          console.log("🔥 [AutoScore] prevTop:", prevTop);
 
           console.log("prevTop:", prevTop);
 
@@ -605,7 +602,7 @@ const JudgeLobby = () => {
                     currentJudgeInfo,
                     contestInfo,
                     compareInfo: { ...realtimeData?.compares },
-                    propSubPlayers: [...prevTop],
+                    propSubPlayers: prevTop,
                   },
                 });
               });
