@@ -592,14 +592,14 @@ const JudgeLobby = () => {
             realtimeData?.compares
           );
 
-          // ✅ compareIndex가 2 이상이면 현재 compares.players를 그대로 이전차수 명단으로 사용
-          const compareIndex = realtimeData?.compares.compareIndex;
+          // 이전 차수 TOP 그대로 사용
+          const compareIndex = realtimeData?.compares?.compareIndex;
+          let prevTop = [];
           if (compareIndex && compareIndex > 1) {
             prevTop = [...(realtimeData?.compares?.players || [])];
           }
 
           console.log("🔥 [AutoScore] prevTop:", prevTop);
-
           console.log("prevTop:", prevTop);
 
           const collectionInfoVote = `currentStage/${
@@ -607,20 +607,17 @@ const JudgeLobby = () => {
           }/compares/judges/${currentJudgeInfo.seatIndex - 1}/messageStatus`;
 
           try {
-            await updateRealtimeData
-              .updateData(collectionInfoVote, "투표중")
-              
-                navigate("/comparevote", {
-                  replace: true,
-                  state: {
-                    currentStageInfo,
-                    currentJudgeInfo,
-                    contestInfo,
-                    compareInfo: { ...realtimeData?.compares },
-                    propSubPlayers: [...prevTop],
-                  },
-                });
-              });
+            await updateRealtimeData.updateData(collectionInfoVote, "투표중");
+            navigate("/comparevote", {
+              replace: true,
+              state: {
+                currentStageInfo,
+                currentJudgeInfo,
+                contestInfo,
+                compareInfo: { ...realtimeData?.compares },
+                propSubPlayers: [...prevTop],
+              },
+            });
           } catch (error) {
             console.error("Error during updateRealtimeData:", error);
           }
