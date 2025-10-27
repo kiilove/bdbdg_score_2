@@ -611,11 +611,11 @@ const JudgeLobby = () => {
             navigate("/comparevote", {
               replace: true,
               state: {
-                currentStageInfo,
-                currentJudgeInfo,
+                currentStageInfo: payloadStageInfo,
+                currentJudgeInfo: payloadJudgeInfo,
                 contestInfo,
                 compareInfo: { ...realtimeData?.compares },
-                propSubPlayers: [...prevTop],
+                propSubPlayers: prevTop,
               },
             });
           } catch (error) {
